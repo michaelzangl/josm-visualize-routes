@@ -1,22 +1,25 @@
 package org.openstreetmap.josm.plugins.visualizeroutes.gui.linear;
 
+import org.openstreetmap.josm.actions.relation.EditRelationAction;
 import org.openstreetmap.josm.data.osm.OsmPrimitive;
 import org.openstreetmap.josm.data.osm.OsmPrimitiveType;
 import org.openstreetmap.josm.data.osm.Relation;
 import org.openstreetmap.josm.data.osm.RelationMember;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteMasterRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
+import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaRelationTags;
 import org.openstreetmap.josm.tools.GBC;
+import org.openstreetmap.josm.tools.ImageProvider;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -27,14 +30,13 @@ import static org.openstreetmap.josm.tools.I18n.tr;
  */
 public class PublicTransportLinePanel extends JPanel {
 
-    private final Optional<Relation> master;
-    private final List<LineRelation> relations;
-    private final String color;
+    private final String tabTitle;
 
     public PublicTransportLinePanel(LineRelationsProvider p) {
-        this.master = Objects.requireNonNull(p.getMasterRelation(), "p.getMasterRelation()");
-        this.relations = Objects.requireNonNull(p.getRelations(), "p.getRelations()");
-        this.color = master.map(it -> it.get("colour")).filter(Objects::nonNull).orElse("#888888");
+        tabTitle = p.getTabTitle();
+        Optional<Relation> master = Objects.requireNonNull(p.getMasterRelation(), "p.getMasterRelation()");
+        List<LineRelation> relations = Objects.requireNonNull(p.getRelations(), "p.getRelations()");
+        String color = master.map(it -> it.get("colour")).filter(Objects::nonNull).orElse("#888888");
 
         setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
         setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -51,6 +53,17 @@ public class PublicTransportLinePanel extends JPanel {
 
         add(Box.createRigidArea(new Dimension(0, 5)));
 
+        if (relations.isEmpty()) {
+            add(new UnBoldLabel(tr("No public transport v2 routes are currently used for this relation.")));
+        } else {
+            renderRelationGrid(p, relations);
+        }
+    }
+
+    private void renderRelationGrid(LineRelationsProvider p, List<LineRelation> relations) {
+        int actionColumn = relations.size();
+        int labelColumn = relations.size() + 1;
+
         // HEADER LINES
         JPanel gridArea = new JPanel(new GridBagLayout());
         for (int i = 0; i < relations.size(); i++) {
@@ -59,8 +72,13 @@ public class PublicTransportLinePanel extends JPanel {
             String name = safeHtml(relation.get("name"));
             String path = Stream.of(relation.get("from"), relation.get("via"), relation.get("to")).filter(Objects::nonNull).collect(Collectors.joining(" → "));
             UnBoldLabel label = new UnBoldLabel(MessageFormat.format("<html><div><font color=\"{2}\">{0}</font></div><div>" + "<font color=\"{2}\">{1}</font></div></html>",
-                    name, safeHtml(path), relations.get(i).isPrimary() ? "black" : "#888888"));
-            gridArea.add(label, GBC.std(relations.size(), i).fill(GridBagConstraints.HORIZONTAL).weight(1, 0));
+                name, safeHtml(path), relations.get(i).isPrimary() ? "black" : "#888888"));
+            gridArea.add(label, GBC.std(labelColumn, i).fill(GridBagConstraints.HORIZONTAL).weight(1, 0));
+
+            gridArea.add(createActions(
+                createAction(tr("Open route relation"), new ImageProvider("dialogs", "edit"),
+                    relation.equals(p.getCurrentRelation()) ? null : () -> EditRelationAction.launchEditor(relation))
+            ), GBC.std(actionColumn, i));
         }
 
         // CONTENT LINES
@@ -72,7 +90,7 @@ public class PublicTransportLinePanel extends JPanel {
             if (stop.isIncomplete() || !stop.getNameAndInfos().isEmpty()) {
                 String incomplete = stop.isIncomplete() ? " <font color=\"red\">" + tr("Incomplete") + "</font>" : "";
                 UnBoldLabel label = new UnBoldLabel(MessageFormat.format("<html>{0}{1}</html>", safeHtml(stop.getNameAndInfos()), incomplete));
-                gridArea.add(label, GBC.std(relations.size(), stopGridOffset + i));
+                gridArea.add(label, GBC.std(labelColumn, stopGridOffset + i));
             }
         }
         List<List<LineGridCell>> gridColumns = collector.getLineGrid();
@@ -90,8 +108,37 @@ public class PublicTransportLinePanel extends JPanel {
         add(gridArea);
     }
 
+    private JPanel createActions(JButton... actions) {
+        JPanel panel = new JPanel();
+        for (JButton action: actions) {
+            panel.add(action);
+        }
+        return panel;
+    }
+
+    private JButton createAction(String label, ImageProvider icon, Runnable action) {
+        return new JButton(new AbstractAction() {
+            {
+                // putValue(NAME, label);
+                putValue(SHORT_DESCRIPTION, label);
+                icon.getResource()
+                    .attachImageIcon(this, true);
+                setEnabled(action != null);
+            }
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                action.run();
+            }
+        });
+    }
+
     private String safeHtml(String text) {
         return text == null ? "" : text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
+    }
+
+    public String getTabTitle() {
+        return tabTitle;
     }
 
     public static PublicTransportLinePanel forRelation(Relation relation) {
@@ -105,7 +152,20 @@ public class PublicTransportLinePanel extends JPanel {
 
                 @Override
                 public List<LineRelation> getRelations() {
-                    return master.map(it -> getRouteRelations(it, relation::equals)).orElseGet(() -> Arrays.asList(new LineRelation(relation, true)));
+                    return master.map(m -> getRouteRelations(m)
+                        .map(it -> new LineRelation(it,  relation.equals(it)))
+                        .collect(Collectors.toList()))
+                        .orElseGet(() -> Arrays.asList(new LineRelation(relation, true)));
+                }
+
+                @Override
+                public Relation getCurrentRelation() {
+                    return relation;
+                }
+
+                @Override
+                public String getTabTitle() {
+                    return tr("Route");
                 }
             });
         } else if (isRouteMaster(relation)) {
@@ -117,16 +177,65 @@ public class PublicTransportLinePanel extends JPanel {
 
                 @Override
                 public List<LineRelation> getRelations() {
-                    return getRouteRelations(relation, __ -> true);
+                    return getRouteRelations(relation)
+                        .map(it -> new LineRelation(it, true))
+                        .collect(Collectors.toList());
+                }
+
+                @Override
+                public Relation getCurrentRelation() {
+                    return relation;
+                }
+
+                @Override
+                public String getTabTitle() {
+                    return tr("Routes");
                 }
             });
+        } else if (OsmStopAreaRelationTags.isStopArea(relation)) {
+            PublicTransportLinePanel panel = new PublicTransportLinePanel(new LineRelationsProvider() {
+                @Override
+                public Optional<Relation> getMasterRelation() {
+                    return Optional.empty();
+                }
+
+                @Override
+                public List<LineRelation> getRelations() {
+                    // All the trams / busses stopping on any of our stops.
+                    // TODO: Platforms?
+                    return getRouteRelations(relation.getMembers()
+                        .stream()
+                        .filter(it -> OsmStopAreaRelationTags.ROLE_STOP.equals(it.getRole()))
+                        .flatMap(it -> it.getMember().getReferrers().stream()))
+                        .map(it -> new LineRelationAroundStop(it, true, stop -> stop.getReferrers().contains(relation)))
+                        .collect(Collectors.toList());
+                }
+
+                @Override
+                public Relation getCurrentRelation() {
+                    return relation;
+                }
+
+                @Override
+                public String getTabTitle() {
+                    return tr("Routes");
+                }
+            });
+            return panel;
         } else {
             return null;
         }
     }
 
-    private static List<LineRelation> getRouteRelations(Relation master, Predicate<Relation> isPrimary) {
-        return master.getMembers().stream().filter(RelationMember::isRelation).map(it -> (Relation) it.getMember()).filter(OsmRouteRelationTags::isV2PtRoute).map(it -> new LineRelation(it, isPrimary.test(it))).collect(Collectors.toList());
+    private static Stream<Relation> getRouteRelations(Relation master) {
+        return getRouteRelations(master.getMembers().stream().map(RelationMember::getMember));
+    }
+
+    private static Stream<Relation> getRouteRelations(Stream<OsmPrimitive> primitives) {
+        return primitives
+            .filter(it -> it.getType() == OsmPrimitiveType.RELATION)
+            .map(it -> (Relation) it)
+            .filter(OsmRouteRelationTags::isV2PtRoute);
     }
 
     public static boolean isRouteMaster(OsmPrimitive relation) {
