@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.UnBoldLabel.safeHtml;
 import static org.openstreetmap.josm.tools.I18n.tr;
 
 /**
@@ -29,20 +30,11 @@ public class PublicTransportLinePanel extends JPanel {
     public PublicTransportLinePanel(LineRelationsProvider p) {
         Optional<Relation> master = Objects.requireNonNull(p.getMasterRelation(), "p.getMasterRelation()");
         List<LineRelation> relations = Objects.requireNonNull(p.getRelations(), "p.getRelations()");
-        String color = master.map(it -> it.get("colour")).filter(Objects::nonNull).orElse("#888888");
 
         setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
         setBorder(new EmptyBorder(5, 5, 5, 5));
 
-        if (master.isPresent()) {
-            Relation m = master.get();
-            String headline = MessageFormat.format("<font background=\"{0}\">{1}</font> {2}", safeHtml(color), safeHtml(m.get("ref")), safeHtml(m.get("name")));
-            String infos = safeHtml(m.get("operator")) + " " + safeHtml(m.get("network"));
-            String routeMasterText = MessageFormat.format("<html><h2>{0}</h2><div>{1}</div></html>", headline, infos);
-            add(new UnBoldLabel(routeMasterText));
-        } else {
-            add(new UnBoldLabel(tr("Route that is not in a parent relation")));
-        }
+        add(p.createHeadlinePanel());
 
         add(Box.createRigidArea(new Dimension(0, 5)));
 
@@ -126,25 +118,8 @@ public class PublicTransportLinePanel extends JPanel {
         });
     }
 
-    private String safeHtml(String text) {
-        return text == null ? "" : text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
-    }
-
     public static boolean isRouteMaster(OsmPrimitive relation) {
         return relation.getType() == OsmPrimitiveType.RELATION && OsmRouteMasterRelationTags.isRouteMaster(relation);
-    }
-
-    private static class UnBoldLabel extends JLabel {
-        public UnBoldLabel(String text) {
-            super(text);
-            setHorizontalAlignment(LEFT);
-            setFont(getFont().deriveFont(0));
-        }
-
-        @Override
-        public Dimension getMaximumSize() {
-            return new Dimension(Integer.MAX_VALUE, super.getMaximumSize().height);
-        }
     }
 
 }

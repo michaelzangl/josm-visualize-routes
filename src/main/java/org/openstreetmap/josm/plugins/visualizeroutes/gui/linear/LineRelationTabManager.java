@@ -2,12 +2,16 @@ package org.openstreetmap.josm.plugins.visualizeroutes.gui.linear;
 
 import static org.openstreetmap.josm.tools.I18n.tr;
 
+import java.awt.Component;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 import org.openstreetmap.josm.data.osm.OsmPrimitive;
@@ -56,6 +60,12 @@ public class LineRelationTabManager extends AbstractTabManager {
                         public Relation getCurrentRelation() {
                             return relation;
                         }
+
+                        @Override
+                        public Component createHeadlinePanel() {
+                            return master.<Component>map(RouteMasterHeadlinePanel::new)
+                                .orElseGet(() -> new JLabel(tr("This route is not in a route master relation.")));
+                        }
                     });
                 }
 
@@ -91,6 +101,11 @@ public class LineRelationTabManager extends AbstractTabManager {
                         public Relation getCurrentRelation() {
                             return relation;
                         }
+
+                        @Override
+                        public Component createHeadlinePanel() {
+                            return new RouteMasterHeadlinePanel(relation);
+                        }
                     });
                 }
 
@@ -118,17 +133,29 @@ public class LineRelationTabManager extends AbstractTabManager {
                         public List<LineRelation> getRelations() {
                             // All the trams / busses stopping on any of our stops.
                             // TODO: Platforms?
-                            return getRouteRelations(relation.getMembers()
+                            List<Relation> routeRelations = getRouteRelations(relation.getMembers()
                                 .stream()
                                 .filter(it -> OsmStopAreaRelationTags.ROLE_STOP.equals(it.getRole()))
                                 .flatMap(it -> it.getMember().getReferrers().stream()))
-                                .map(it -> new LineRelationAroundStop(it, true, stop -> stop.getReferrers().contains(relation)))
+                                .collect(Collectors.toList());
+                            // If we have many routes, show fewer stops.
+                            int count = routeRelations.size() > 10 ? 1 : routeRelations.size() > 4 ? 3 : 5;
+                            return routeRelations
+                                .stream()
+                                .map(it -> new LineRelationAroundStop(it, true,
+                                    stop -> stop.getReferrers().contains(relation), count))
                                 .collect(Collectors.toList());
                         }
 
                         @Override
                         public Relation getCurrentRelation() {
                             return relation;
+                        }
+
+                        @Override
+                        public Component createHeadlinePanel() {
+                            String title = tr("Routes stopping at {0}", relation.get("name"));
+                            return new UnBoldLabel("<html><h2>" + UnBoldLabel.safeHtml(title) + "</h2></html>");
                         }
                     });
                 }

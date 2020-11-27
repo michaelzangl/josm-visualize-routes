@@ -8,6 +8,7 @@ public class OsmStopAreaRelationTags {
     public static final String KEY_PUBLIC_TRANSPORT = "public_transport";
     public static final String KEY_PUBLIC_TRANSPORT_VALUE_STOP_AREA = "stop_area";
     public static final String ROLE_STOP = "stop";
+    public static final String ROLE_PLATFORM = "platform";
 
 
     private OsmStopAreaRelationTags() {

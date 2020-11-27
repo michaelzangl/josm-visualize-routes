@@ -10,8 +10,13 @@ import javax.swing.*;
 import static org.openstreetmap.josm.tools.I18n.tr;
 
 public class StopVicinityTabManager extends AbstractTabManager {
+    private final IRelationEditorActionAccess editorAccess;
+    // Used so that zoom gets not lost when re-creating the view due to changes in the relation.
+    private final ZoomSaver zoomSaver = new ZoomSaver();
+
     public StopVicinityTabManager(IRelationEditorActionAccess editorAccess) {
         super(editorAccess);
+        this.editorAccess = editorAccess;
     }
 
     @Override
@@ -24,7 +29,7 @@ public class StopVicinityTabManager extends AbstractTabManager {
 
             @Override
             public JPanel getTabContent() {
-                return new StopVicinityPanel(relation);
+                return new StopVicinityPanel(relation, editorAccess, zoomSaver);
             }
 
             @Override
