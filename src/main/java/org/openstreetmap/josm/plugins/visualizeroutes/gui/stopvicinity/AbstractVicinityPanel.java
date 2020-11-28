@@ -45,6 +45,7 @@ public abstract class AbstractVicinityPanel extends JPanel {
             boolean initial = true;
             @Override
             public boolean prepareToDraw() {
+                dataSetCopy.refreshIfRequired();
                 super.prepareToDraw();
                 if (initial) {
                     if (zoom.getLastZoom() != null) {
@@ -153,6 +154,10 @@ public abstract class AbstractVicinityPanel extends JPanel {
 
     protected void doAction(Point point) {
         // default nop
+    }
+
+    public void dispose() {
+        dataSetCopy.dispose();
     }
 
     private static class FixedStyleLayerPainter implements MapViewPaintable.LayerPainter {
