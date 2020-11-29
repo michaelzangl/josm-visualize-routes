@@ -1,16 +1,15 @@
 package org.openstreetmap.josm.plugins.visualizeroutes.gui.linear;
 
-import static org.openstreetmap.josm.tools.I18n.tr;
-
-import java.awt.BorderLayout;
-import java.awt.event.ActionEvent;
-
-import javax.swing.JButton;
-import javax.swing.JPanel;
-
 import org.openstreetmap.josm.actions.JosmAction;
 import org.openstreetmap.josm.data.osm.OsmPrimitiveType;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.UnBoldLabel;
 import org.openstreetmap.josm.plugins.visualizeroutes.utils.DownloadUtils;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+
+import static org.openstreetmap.josm.tools.I18n.tr;
 
 public class StopAreaHeadline extends JPanel {
     public StopAreaHeadline(RelationAccess relation) {

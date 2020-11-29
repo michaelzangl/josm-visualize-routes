@@ -6,6 +6,7 @@ import org.openstreetmap.josm.data.osm.Relation;
 import org.openstreetmap.josm.gui.ExtendedDialog;
 import org.openstreetmap.josm.gui.layer.OsmDataLayer;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.UnBoldLabel;
 import org.openstreetmap.josm.plugins.visualizeroutes.utils.DownloadUtils;
 import org.openstreetmap.josm.tools.GBC;
 
@@ -15,7 +16,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.util.Comparator;
 
-import static org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.UnBoldLabel.safeHtml;
+import static org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.UnBoldLabel.safeHtml;
 import static org.openstreetmap.josm.tools.I18n.tr;
 
 public class NoRouteMasterHeadline extends JPanel {

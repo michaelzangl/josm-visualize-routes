@@ -12,22 +12,29 @@ import org.openstreetmap.josm.gui.dialogs.relation.MemberTableModel;
 import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorActionAccess;
 import org.openstreetmap.josm.gui.draw.MapViewPath;
 import org.openstreetmap.josm.gui.layer.OsmDataLayer;
+import org.openstreetmap.josm.plugins.pt_assistant.data.DerivedDataSet;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmPlatformTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopPositionTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationAccess;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationEditorAccessUtils;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.AbstractVicinityPanel;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.UnBoldLabel;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.ZoomSaver;
+import org.openstreetmap.josm.plugins.visualizeroutes.utils.DownloadUtils;
 import org.openstreetmap.josm.tools.Pair;
 
 import javax.swing.*;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.awt.geom.Point2D;
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -36,7 +43,7 @@ import static org.openstreetmap.josm.tools.I18n.tr;
 
 /**
  * Allows to show the vicintiy of a stop area end edit it in a visualized view
- *
+ * <p>
  * Supported features:
  * - add / remove platform
  * - add / remove stop_position
@@ -48,64 +55,105 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
         super(createDataSetWithNewRelation(editorAccess.getEditor().getLayer(), editorAccess.getEditor().getRelation(), editorAccess), zoomSaver);
         this.editorAccess = editorAccess;
 
-        addActionButtons();
-    }
-
-    private static DataSetClone createDataSetWithNewRelation(OsmDataLayer layer, Relation stopRelation,
-                                                             IRelationEditorActionAccess editorAccess) {
-        DataSetClone clone = new DataSetClone(layer.getDataSet());
-
-        // Now apply the relation editor changes
-        // Simulate org.openstreetmap.josm.gui.dialogs.relation.actions.SavingAction.applyChanges
-        // We cannot use that method, since it uses global undo/redo queue
-        Relation relation = stopRelation != null ? (Relation) clone.getClone().getPrimitiveById(stopRelation.getPrimitiveId()) : null;
-        if (relation == null) {
-            relation = new Relation();
-            clone.getClone().addPrimitive(relation);
+        if (RelationAccess.of(editorAccess)
+                .getMembers()
+                .stream()
+                .anyMatch(it -> it.getMember().isIncomplete())) {
+            UnBoldLabel warnPanel = new UnBoldLabel(MessageFormat.format(
+                "<html><p>{0}</p><p>{1}</p></html>",
+                tr("This relation contains incomplete (not downloaded) members!"),
+                tr("Some features may not be visible on this map.")));
+            warnPanel.setForeground(new Color(0xAA0000));
+            warnPanel.setBorder(new CompoundBorder(
+                new LineBorder(warnPanel.getForeground(), 2),
+                new EmptyBorder(5, 10, 5, 10)
+            ));
+            warnPanel.setBackground(new Color(0xFFBABA));
+            warnPanel.setOpaque(true);
+            //warnPanel.setSize(warnPanel.getMinimumSize());
+            //warnPanel.setLocation(10, 40);
+            add(warnPanel, BorderLayout.NORTH);
         }
-        editorAccess.getTagModel().applyToPrimitive(relation);
+    }
 
-        List<RelationMember> members = RelationEditorAccessUtils.getRelationMembers(editorAccess);
+    private static DerivedDataSet createDataSetWithNewRelation(OsmDataLayer layer, Relation stopRelation,
+                                                               IRelationEditorActionAccess editorAccess) {
+        long editedRelationId = stopRelation == null ? 0 : stopRelation.getId();
+        BBox bBox = new BBox();
+        RelationEditorAccessUtils.streamMembers(editorAccess)
+            // Extra space: Something around 200.500m depending on where we are on the map.
+            .forEach(p -> bBox.addPrimitive(p.getMember(), 0.005));
 
-        relation.setMembers(clone.convertMembers(members));
-        // This is a hack to tag our currently active relation.
-        // There is no id selector in MapCSS, so we need a way to uniquely identify our relation
-        relation.put("activePtRelation", "1");
-        return clone;
+        return new DerivedDataSet(layer.getDataSet()) {
+            @Override
+            protected boolean isIncluded(OsmPrimitive primitive) {
+                return primitive.getType() != OsmPrimitiveType.RELATION
+                    // Normal primitives: all in bbox
+                    ? bBox.intersects(primitive.getBBox())
+                    // Relations: all except the one we edit
+                    // todo: restrict this, e.g. only PT relations + multipolygons in bbox
+                    : primitive.getId() != editedRelationId;
+            }
+
+            @Override
+            protected void addAdditionalGeometry(DataSet addTo) {
+                // Now apply the relation editor changes
+                // Simulate org.openstreetmap.josm.gui.dialogs.relation.actions.SavingAction.applyChanges
+                Relation relation = new Relation();
+                editorAccess.getTagModel().applyToPrimitive(relation);
+                // This is a hack to tag our currently active relation.
+                // There is no id selector in MapCSS, so we need a way to uniquely identify our relation
+                relation.put("activePtRelation", "1");
+
+                addTo.addPrimitive(relation);
+
+                RelationEditorAccessUtils.getRelationMembers(editorAccess)
+                    .forEach(m -> relation.addMember(addOrGetDerivedMember(m)));
+            }
+        };
     }
 
 
-    private void addActionButtons() {
+    @Override
+    protected JComponent generateActionButtons() {
+        JPanel panel = new JPanel();
+        panel.setOpaque(false);
+
+        JButton downloadButton = new JButton(new JosmAction(
+            tr("Download vicinity"),
+            "download",
+            tr("Download data around the current station area."),
+            null,
+            false
+        ) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                DownloadUtils.downloadUsingOverpass(
+                    "org/openstreetmap/josm/plugins/pt_assistant/gui/linear/downloadStopAreaVicinity.query.txt",
+                    line -> line
+                        .replace("##NODEIDS##", DownloadUtils.collectMemberIds(RelationAccess.of(editorAccess), OsmPrimitiveType.NODE))
+                        .replace("##WAYIDS##", DownloadUtils.collectMemberIds(RelationAccess.of(editorAccess), OsmPrimitiveType.WAY))
+                        .replace("##RELATIONIDS##", DownloadUtils.collectMemberIds(RelationAccess.of(editorAccess), OsmPrimitiveType.RELATION)));
+            }
+        });
+        panel.add(downloadButton);
         JButton zoomToButton = new JButton(new JosmAction(
             tr("Zoom to"),
             "dialogs/autoscale/data",
             tr("Zoom to the current station area."),
             null,
             false
-        ){
+        ) {
             @Override
             public void actionPerformed(ActionEvent e) {
                 zoomToRelation();
             }
         });
-        zoomToButton.setSize(zoomToButton.getPreferredSize());
-        setLocationToTopRight(mapView, zoomToButton);
-        mapView.add(zoomToButton);
-        mapView.addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent e) {
-                setLocationToTopRight(mapView, zoomToButton);
-            }
-            @Override
-            public void componentShown(ComponentEvent e) {
-                setLocationToTopRight(mapView, zoomToButton);
-            }
-        });
+        panel.add(zoomToButton);
+
+        return panel;
     }
 
-    private void setLocationToTopRight(MapView mapView, JButton zoomToButton) {
-        zoomToButton.setLocation(mapView.getWidth() - zoomToButton.getWidth() - 10, 10);
-    }
 
     private void zoomToRelation() {
         BoundingXYVisitor v = new BoundingXYVisitor();
@@ -123,6 +171,12 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
     @Override
     protected String getStylePath() {
         return "org/openstreetmap/josm/plugins/visualizeroutes/gui/stopvicinity/vicinitystyle.mapcss";
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        // TODO REMOVE
+        super.paintComponent(g);
     }
 
     @Override
@@ -190,8 +244,7 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
         Integer snapDistance = MapView.PROP_SNAP_DISTANCE.get();
         MapViewRectangle rect = state.getForView(point.getX() - snapDistance, point.getY() - snapDistance)
             .rectTo(state.getForView(point.getX() + snapDistance, point.getY() + snapDistance));
-        BBox bbox = rect.getLatLonBoundsBox().toBBox();
-        return bbox;
+        return rect.getLatLonBoundsBox().toBBox();
     }
 
     @Override
@@ -264,7 +317,7 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
             .filter(OsmRouteRelationTags::isV2PtRoute)
             .anyMatch(r -> r.getMembers()
                 .stream()
-            .anyMatch(member -> member.getMember().equals(primitive) && OsmRouteRelationTags.STOP_ROLES.contains(member.getRole())));
+                .anyMatch(member -> member.getMember().equals(primitive) && OsmRouteRelationTags.STOP_ROLES.contains(member.getRole())));
     }
 
     // Enum to make it fast, e.g for getAvailableActions
@@ -307,7 +360,7 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
         private static void addMember(IRelationEditorActionAccess editorAccess, OsmPrimitive primitive, String role) {
             MemberTableModel table = editorAccess.getMemberTableModel();
             table.addMembersAtEnd(Collections.singletonList(primitive));
-            table.updateRole(new int[] {table.getRowCount() - 1}, role);
+            table.updateRole(new int[]{table.getRowCount() - 1}, role);
         }
 
         abstract void addActionButtons(JPopupMenu menu, OsmPrimitive primitive, IRelationEditorActionAccess editorAccess);
@@ -324,7 +377,9 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
 
     private class ActionsMenu extends JPopupMenu {
         ActionsMenu(OsmPrimitive forPrimitive, List<EStopVicinityAction> actions) {
-            for (EStopVicinityAction action: actions) {
+            add(new TagsOfPrimitive(forPrimitive));
+            add(new JSeparator());
+            for (EStopVicinityAction action : actions) {
                 action.addActionButtons(this, forPrimitive, editorAccess);
             }
         }

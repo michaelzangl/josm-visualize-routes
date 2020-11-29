@@ -1,8 +1,8 @@
 package org.openstreetmap.josm.plugins.visualizeroutes.gui.linear;
 
-
 import org.openstreetmap.josm.actions.JosmAction;
 import org.openstreetmap.josm.data.osm.OsmPrimitiveType;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.UnBoldLabel;
 import org.openstreetmap.josm.plugins.visualizeroutes.utils.DownloadUtils;
 
 import javax.swing.*;
@@ -10,7 +10,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.text.MessageFormat;
 
-import static org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.UnBoldLabel.safeHtml;
+import static org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.UnBoldLabel.safeHtml;
 import static org.openstreetmap.josm.tools.I18n.tr;
 
 public class RouteMasterHeadlinePanel extends JPanel {

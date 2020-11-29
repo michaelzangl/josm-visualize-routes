@@ -4,6 +4,7 @@ import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorAction
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.AbstractTabManager;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationAccess;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.ZoomSaver;
 
 import static org.openstreetmap.josm.tools.I18n.tr;
 

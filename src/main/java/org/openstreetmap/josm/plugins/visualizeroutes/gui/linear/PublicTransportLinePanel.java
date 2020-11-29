@@ -4,6 +4,7 @@ import org.openstreetmap.josm.actions.relation.EditRelationAction;
 import org.openstreetmap.josm.data.osm.OsmPrimitive;
 import org.openstreetmap.josm.data.osm.OsmPrimitiveType;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteMasterRelationTags;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.UnBoldLabel;
 import org.openstreetmap.josm.tools.GBC;
 import org.openstreetmap.josm.tools.ImageProvider;
 
@@ -17,7 +18,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.UnBoldLabel.safeHtml;
+import static org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.UnBoldLabel.safeHtml;
 import static org.openstreetmap.josm.tools.I18n.tr;
 
 /**
