@@ -211,7 +211,7 @@ public class StopCollector {
 
         CollectedStopsForRelation(LineRelation line) {
             this.line = line;
-            this.priority = line.getRelation().getMembers().stream().filter(it -> OsmRouteRelationTags.STOP_ROLES.contains(it.getRole())).count()
+            this.priority = line.getRelation().getMembers().stream().filter(it -> OsmRouteRelationTags.STOP_AND_PLATFORM_ROLES.contains(it.getRole())).count()
                 + (line.isPrimary() ? 1_000_000 : 0);
         }
 
@@ -262,7 +262,7 @@ public class StopCollector {
         private final RelationMember member;
 
         FoundStopPosition(RelationMember member) {
-            if (!OsmRouteRelationTags.STOP_ROLES.contains(member.getRole())) {
+            if (!OsmRouteRelationTags.STOP_AND_PLATFORM_ROLES.contains(member.getRole())) {
                 throw new IllegalArgumentException("Not a stop position: " + member);
             }
             this.member = member;

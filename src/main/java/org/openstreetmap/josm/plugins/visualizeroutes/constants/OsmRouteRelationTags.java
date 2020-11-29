@@ -5,6 +5,8 @@ import org.openstreetmap.josm.data.osm.Tagged;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Tags for the relation
@@ -42,6 +44,7 @@ public class OsmRouteRelationTags {
     public static final String ROLE_PLATFORM_EXIT_ONLY = "platform_exit_only";
     public static final String ROLE_PLATFORM_ENTRY_ONLY = "platform_entry_only";
     public static final Collection<String> PLATFORM_ROLES = List.of(ROLE_PLATFORM, ROLE_PLATFORM_EXIT_ONLY, ROLE_PLATFORM_ENTRY_ONLY);
+    public static final Collection<String> STOP_AND_PLATFORM_ROLES = Stream.concat(STOP_ROLES.stream(), PLATFORM_ROLES.stream()).collect(Collectors.toList());
 
 
     public static boolean isV2PtRoute(Tagged tagged) {

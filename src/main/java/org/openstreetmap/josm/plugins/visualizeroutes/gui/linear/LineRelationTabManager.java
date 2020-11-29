@@ -102,8 +102,7 @@ public class LineRelationTabManager extends AbstractTabManager<PublicTransportLi
                             // TODO: Platforms?
                             List<Relation> routeRelations = getRouteRelations(
                                 RelationEditorAccessUtils.streamMembers(editorAccess)
-                                .filter(it -> OsmRouteRelationTags.STOP_ROLES.contains(it.getRole())
-                                    || OsmRouteRelationTags.PLATFORM_ROLES.contains(it.getRole()))
+                                .filter(it -> OsmRouteRelationTags.STOP_AND_PLATFORM_ROLES.contains(it.getRole()))
                                 .flatMap(it -> it.getMember().getReferrers().stream()))
                                 .distinct()
                                 .collect(Collectors.toList());
