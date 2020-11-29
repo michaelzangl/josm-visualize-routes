@@ -9,19 +9,18 @@ import org.openstreetmap.josm.gui.MapViewState;
 import org.openstreetmap.josm.gui.MapViewState.MapViewPoint;
 import org.openstreetmap.josm.gui.MapViewState.MapViewRectangle;
 import org.openstreetmap.josm.gui.dialogs.relation.MemberTableModel;
+import org.openstreetmap.josm.gui.dialogs.relation.RelationEditor;
 import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorActionAccess;
 import org.openstreetmap.josm.gui.draw.MapViewPath;
 import org.openstreetmap.josm.gui.layer.OsmDataLayer;
 import org.openstreetmap.josm.plugins.pt_assistant.data.DerivedDataSet;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmPlatformTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
+import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaGroupRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaRelationTags;
-import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopPositionTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationAccess;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationEditorAccessUtils;
-import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.AbstractVicinityPanel;
-import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.UnBoldLabel;
-import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.ZoomSaver;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.*;
 import org.openstreetmap.josm.plugins.visualizeroutes.utils.DownloadUtils;
 import org.openstreetmap.josm.tools.Pair;
 
@@ -96,7 +95,7 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
             }
 
             @Override
-            protected void addAdditionalGeometry(DataSet addTo) {
+            protected void addAdditionalGeometry(AdditionalGeometryAccess addTo) {
                 // Now apply the relation editor changes
                 // Simulate org.openstreetmap.josm.gui.dialogs.relation.actions.SavingAction.applyChanges
                 Relation relation = new Relation();
@@ -105,7 +104,27 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
                 // There is no id selector in MapCSS, so we need a way to uniquely identify our relation
                 relation.put("activePtRelation", "1");
 
-                addTo.addPrimitive(relation);
+                if (stopRelation != null) {
+                    addTo.addAsCopy(stopRelation, relation);
+
+                    // Now we search for all sibling relations.
+                    // Due to https://josm.openstreetmap.de/ticket/6129#comment:24 we cannot do it in MapCSS
+                    stopRelation.getReferrers()
+                        .stream()
+                        .filter(r -> r instanceof Relation && OsmStopAreaGroupRelationTags.isStopAreaGroup((Relation) r))
+                        .flatMap(parent -> ((Relation) parent).getMembers().stream())
+                        .map(RelationMember::getMember)
+                        .filter(sibling -> sibling != stopRelation)
+                        .forEach(sibling -> {
+                            Relation copy = new Relation((Relation) sibling);
+                            copy.put("siblingOfActive", "1");
+                            // This will add the copy with the fake tag.
+                            addOrGetDerived(copy);
+                        });
+
+                } else {
+                    addTo.add(relation);
+                }
 
                 RelationEditorAccessUtils.getRelationMembers(editorAccess)
                     .forEach(m -> relation.addMember(addOrGetDerivedMember(m)));
@@ -251,9 +270,12 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
     protected void doAction(Point point) {
         OsmPrimitive primitive = getPrimitiveAt(point);
         if (primitive != null) {
-            List<EStopVicinityAction> actions = getAvailableActions(primitive);
-            if (!actions.isEmpty()) {
-                showActionsMenu(point, primitive, actions);
+            OsmPrimitive originalPrimitive = dataSetCopy.findOriginal(primitive);
+            if (originalPrimitive != null) {
+                List<EStopVicinityAction> actions = getAvailableActions(originalPrimitive);
+                if (!actions.isEmpty()) {
+                    showActionsMenu(point, originalPrimitive, actions);
+                }
             }
         }
     }
@@ -300,15 +322,15 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
     private List<EStopVicinityAction> getAvailableActionsForNonmember(OsmPrimitive primitive) {
         if (OsmPlatformTags.isPlatform(primitive)) {
             return Arrays.asList(EStopVicinityAction.ADD_PLATFORM_TO_STOP_AREA);
-        } else if (OsmStopPositionTags.isStopPosition(primitive)
-            || isStopMemberAnywhere(primitive)) {
+        } else if (OsmPlatformTags.isStopPosition(primitive)
+            || isStopMemberInAnyRoute(primitive)) {
             return Arrays.asList(EStopVicinityAction.ADD_STOP_TO_STOP_AREA);
         } else {
             return Collections.emptyList();
         }
     }
 
-    private boolean isStopMemberAnywhere(OsmPrimitive primitive) {
+    private boolean isStopMemberInAnyRoute(OsmPrimitive primitive) {
         return primitive
             .getReferrers()
             .stream()
@@ -344,7 +366,7 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
         REMOVE_FROM_STOP_AREA {
             @Override
             void addActionButtons(JPopupMenu menu, OsmPrimitive primitive, IRelationEditorActionAccess editorAccess) {
-                menu.add(createActionButton(tr("Remove this from the stop area relation"), () -> {
+                menu.add(createActionButton(tr("Remove from the stop area relation"), () -> {
                     MemberTableModel model = editorAccess.getMemberTableModel();
                     for (int i = 0; i < model.getRowCount(); i++) {
                         if (model.getValue(i).getMember().equals(primitive)) {
@@ -352,10 +374,38 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
                             break;
                         }
                     }
-
                 }));
             }
-        };
+        },
+
+        OPEN_AREA_RELATION {
+            @Override
+            void addActionButtons(JPopupMenu menu, OsmPrimitive primitive, IRelationEditorActionAccess editorAccess) {
+                Relation area = StopAreaUtils.findContainingStopArea(primitive);
+                if (area != null) {
+                    JPanel panel = new JPanel();
+                    panel.setLayout(new BoxLayout(panel, BoxLayout.PAGE_AXIS));
+                    panel.setBorder(new EmptyBorder(5, 5, 5, 5));
+                    panel.add(new UnBoldLabel("<html>" + tr("This element belongs to the stop area <i>{0}</i>",
+                        UnBoldLabel.safeHtml(area.getName())) + "</html>"));
+                    if (StopAreaUtils.findParentStopGroup(area).equals(StopAreaUtils.findParentStopGroup(editorAccess.getEditor().getRelation()))) {
+                        panel.add(new UnBoldLabel(tr("This element belongs to the same stop area group.")));
+                    }
+                    menu.add(panel);
+                    menu.add(createActionButton(tr("Open area relation"), () -> {
+                        DialogUtils.showRelationEditor(RelationEditor.getEditor(
+                            editorAccess.getEditor().getLayer(),
+                            area,
+                            area.getMembers()
+                                .stream()
+                                .filter(it -> it.getMember().equals(primitive))
+                                .collect(Collectors.toList())
+                        ));
+                    }));
+                }
+            }
+        }
+        ;
 
         private static void addMember(IRelationEditorActionAccess editorAccess, OsmPrimitive primitive, String role) {
             MemberTableModel table = editorAccess.getMemberTableModel();

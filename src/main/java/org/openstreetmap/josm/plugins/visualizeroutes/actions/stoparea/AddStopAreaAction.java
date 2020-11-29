@@ -18,6 +18,8 @@ import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmPlatformTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopPositionTags;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.DialogUtils;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.StopAreaUtils;
 
 public class AddStopAreaAction extends JosmAction {
     private static final List<String> TAGS_TO_COPY = Arrays.asList(
@@ -37,7 +39,7 @@ public class AddStopAreaAction extends JosmAction {
     @Override
     protected void updateEnabledState(Collection<? extends OsmPrimitive> selection) {
         setEnabled(selection.size() > 0
-                && selection.stream().noneMatch(it -> null != findContainingStopArea(it)));
+                && selection.stream().noneMatch(it -> null != StopAreaUtils.findContainingStopArea(it)));
     }
 
     @Override
@@ -70,12 +72,11 @@ public class AddStopAreaAction extends JosmAction {
                 .map(selected -> new RelationMember(suggestRole(selected), selected))
                 .forEach(areaRelation::addMember);
 
-        RelationEditor editor = RelationEditor.getEditor(
+        DialogUtils.showRelationEditor(RelationEditor.getEditor(
                 MainApplication.getLayerManager().getEditLayer(),
                 areaRelation,
                 null /* no selected members */
-        );
-        editor.setVisible(true);
+        ));
     }
 
     private String suggestRole(OsmPrimitive selected) {
@@ -87,13 +88,6 @@ public class AddStopAreaAction extends JosmAction {
         } else {
             return "";
         }
-    }
-
-    public static Relation findContainingStopArea(OsmPrimitive primitive) {
-        return (Relation) primitive.getReferrers().stream()
-                .filter(it -> it instanceof Relation && OsmStopAreaRelationTags.isStopArea(it))
-                .findFirst()
-                .orElse(null);
     }
 
 }
