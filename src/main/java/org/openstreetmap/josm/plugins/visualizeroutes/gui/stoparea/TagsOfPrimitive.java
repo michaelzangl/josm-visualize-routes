@@ -1,14 +1,12 @@
-package org.openstreetmap.josm.plugins.visualizeroutes.gui.stopvicinity;
-
-import java.awt.Color;
-import java.awt.Graphics;
-import java.text.MessageFormat;
-
-import javax.swing.border.EmptyBorder;
+package org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea;
 
 import org.openstreetmap.josm.data.osm.OsmPrimitive;
 import org.openstreetmap.josm.data.osm.TagMap;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.UnBoldLabel;
+
+import javax.swing.border.EmptyBorder;
+import java.awt.*;
+import java.text.MessageFormat;
 
 public class TagsOfPrimitive extends UnBoldLabel {
     public TagsOfPrimitive(OsmPrimitive p) {

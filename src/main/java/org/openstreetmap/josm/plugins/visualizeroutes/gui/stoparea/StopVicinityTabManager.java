@@ -1,4 +1,6 @@
-package org.openstreetmap.josm.plugins.visualizeroutes.gui.stopvicinity;
+package org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea;
+
+import static org.openstreetmap.josm.tools.I18n.tr;
 
 import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorActionAccess;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaRelationTags;

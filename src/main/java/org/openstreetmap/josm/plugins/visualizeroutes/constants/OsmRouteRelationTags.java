@@ -45,6 +45,12 @@ public class OsmRouteRelationTags {
     public static final String ROLE_PLATFORM_ENTRY_ONLY = "platform_entry_only";
     public static final Collection<String> PLATFORM_ROLES = List.of(ROLE_PLATFORM, ROLE_PLATFORM_EXIT_ONLY, ROLE_PLATFORM_ENTRY_ONLY);
     public static final Collection<String> STOP_AND_PLATFORM_ROLES = Stream.concat(STOP_ROLES.stream(), PLATFORM_ROLES.stream()).collect(Collectors.toList());
+    public static final String KEY_NAME = "name";
+    public static final String KEY_REF =  "ref";
+    public static final String KEY_UIC_REF = "uic_ref";
+    public static final String KEY_UIC_NAME = "uic_name";
+    public static final String KEY_OPERATOR = "operator";
+    public static final String KEY_NETWORK = "network";
 
 
     public static boolean isV2PtRoute(Tagged tagged) {

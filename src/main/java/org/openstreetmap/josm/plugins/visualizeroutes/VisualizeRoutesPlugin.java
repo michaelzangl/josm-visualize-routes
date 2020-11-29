@@ -4,7 +4,7 @@ import org.openstreetmap.josm.gui.dialogs.relation.RelationEditorHooks;
 import org.openstreetmap.josm.plugins.Plugin;
 import org.openstreetmap.josm.plugins.PluginInformation;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.LineRelationTabManager;
-import org.openstreetmap.josm.plugins.visualizeroutes.gui.stopvicinity.StopVicinityTabManager;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea.StopVicinityTabManager;
 
 import java.awt.*;
 import java.util.List;
@@ -18,6 +18,7 @@ public class VisualizeRoutesPlugin extends Plugin {
     public VisualizeRoutesPlugin(PluginInformation info) {
         super(info);
         addTabs();
+        // TODO: MainMenu.add(menu, new AddStopAreaAction());
     }
 
     private void addTabs() {

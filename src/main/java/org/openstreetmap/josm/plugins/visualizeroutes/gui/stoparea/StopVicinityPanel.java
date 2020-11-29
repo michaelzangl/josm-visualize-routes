@@ -1,4 +1,4 @@
-package org.openstreetmap.josm.plugins.visualizeroutes.gui.stopvicinity;
+package org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea;
 
 import org.openstreetmap.josm.actions.JosmAction;
 import org.openstreetmap.josm.data.osm.*;
@@ -170,7 +170,7 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
 
     @Override
     protected String getStylePath() {
-        return "org/openstreetmap/josm/plugins/visualizeroutes/gui/stopvicinity/vicinitystyle.mapcss";
+        return "org/openstreetmap/josm/plugins/visualizeroutes/gui/stoparea/stopareavicinity.mapcss";
     }
 
     @Override
