@@ -2,23 +2,13 @@ package org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea;
 
 import org.openstreetmap.josm.actions.JosmAction;
 import org.openstreetmap.josm.data.osm.*;
-import org.openstreetmap.josm.data.osm.visitor.BoundingXYVisitor;
-import org.openstreetmap.josm.data.osm.visitor.OsmPrimitiveVisitor;
 import org.openstreetmap.josm.gui.MainApplication;
-import org.openstreetmap.josm.gui.MapView;
-import org.openstreetmap.josm.gui.MapViewState;
-import org.openstreetmap.josm.gui.MapViewState.MapViewPoint;
-import org.openstreetmap.josm.gui.MapViewState.MapViewRectangle;
 import org.openstreetmap.josm.gui.dialogs.relation.MemberTableModel;
 import org.openstreetmap.josm.gui.dialogs.relation.RelationEditor;
 import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorActionAccess;
-import org.openstreetmap.josm.gui.draw.MapViewPath;
-import org.openstreetmap.josm.gui.layer.LayerManager;
 import org.openstreetmap.josm.gui.layer.OsmDataLayer;
 import org.openstreetmap.josm.gui.mappaint.Cascade;
-import org.openstreetmap.josm.gui.mappaint.MultiCascade;
 import org.openstreetmap.josm.plugins.pt_assistant.data.DerivedDataSet;
-import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmPlatformTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaGroupRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaRelationTags;
@@ -26,7 +16,6 @@ import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationAccess;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationEditorAccessUtils;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.*;
 import org.openstreetmap.josm.plugins.visualizeroutes.utils.DownloadUtils;
-import org.openstreetmap.josm.tools.Pair;
 
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
@@ -36,7 +25,6 @@ import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.geom.Point2D;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.*;
@@ -55,11 +43,10 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
     public static final String CSS_CLASS_PLATFORM = "platform";
     public static final String CSS_CLASS_EMPTYMEMBER = "emptymember";
     public static final String CSS_CLASS_STOP_POSITION = "stop_position";
-    private final IRelationEditorActionAccess editorAccess;
 
     public StopVicinityPanel(IRelationEditorActionAccess editorAccess, ZoomSaver zoomSaver) {
-        super(createDataSetWithNewRelation(editorAccess.getEditor().getLayer(), editorAccess.getEditor().getRelation(), editorAccess), zoomSaver);
-        this.editorAccess = editorAccess;
+        super(createDataSetWithNewRelation(editorAccess.getEditor().getLayer(),
+            editorAccess.getEditor().getRelation(), editorAccess), editorAccess, zoomSaver);
 
         if (RelationAccess.of(editorAccess)
                 .getMembers()
@@ -174,127 +161,50 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
             }
         });
         panel.add(downloadButton);
-        JButton zoomToButton = new JButton(new JosmAction(
-            tr("Zoom to"),
-            "dialogs/autoscale/data",
-            tr("Zoom to the current station area."),
-            null,
-            false
-        ) {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                zoomToRelation();
-            }
-        });
-        panel.add(zoomToButton);
+
+        Relation group = StopAreaUtils.findParentStopGroup(editorAccess.getEditor().getRelation());
+        if (group != null) {
+            panel.add(new JButton(new JosmAction(tr("Open area group"), null, null, null, false) {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    DialogUtils.showRelationEditor(RelationEditor.getEditor(
+                        editorAccess.getEditor().getLayer(),
+                        group,
+                        group.getMembers()
+                            .stream()
+                            .filter(m -> m.getMember().getPrimitiveId().equals(editorAccess.getEditor().getRelation()))
+                            .collect(Collectors.toList())
+                    ));
+                }
+            }));
+        }
+
+        panel.add(generateZoomToButton(tr("Zoom to"), tr("Zoom to the current station area.")));
 
         return panel;
     }
 
-
-    private void zoomToRelation() {
-        BoundingXYVisitor v = new BoundingXYVisitor();
-        RelationAccess.of(editorAccess).getMembers().forEach(
-            m -> m.getMember().accept((OsmPrimitiveVisitor) v));
-        mapView.zoomTo(v.getBounds());
-        mapView.zoomOut();
-    }
-
     @Override
     protected void doInitialZoom() {
-        zoomToRelation();
+        zoomToEditorRelation();
     }
 
-    @Override
-    protected String getStylePath() {
-        return "org/openstreetmap/josm/plugins/visualizeroutes/gui/stoparea/stopareavicinity.mapcss";
-    }
-
-    @Override
-    protected void paintComponent(Graphics g) {
-        // TODO REMOVE
-        super.paintComponent(g);
+    protected List<String> getStylePath() {
+        return Arrays.asList(
+            "org/openstreetmap/josm/plugins/visualizeroutes/gui/stoparea/ptbackground.mapcss",
+            "org/openstreetmap/josm/plugins/visualizeroutes/gui/stoparea/stopareavicinity.mapcss");
     }
 
     @Override
     protected OsmPrimitive getPrimitiveAt(Point point) {
-        // Cannot use the mapView methods - they use a global ref to the active layer
-        MapViewState state = mapView.getState();
-        MapViewPoint center = state.getForView(point.getX(), point.getY());
-        BBox bbox = getBoundsAroundMouse(point, state);
-        List<Node> nodes = dataSetCopy.getClone().searchNodes(bbox);
-        Optional<Node> nearest = nodes.stream()
-            .filter(it -> !getAvailableActions(it).isEmpty())
-            .min(Comparator.comparing(node -> state.getPointFor(node).distanceToInViewSq(center)));
-        if (nearest.isPresent()) {
-            return nearest.get();
-        } else {
-            // No nearest node => search way
-            List<Way> ways = dataSetCopy.getClone().searchWays(bbox)
-                .stream()
-                .filter(it -> !getAvailableActions(it).isEmpty())
-                .collect(Collectors.toList());
-
-            Integer snapDistance = MapView.PROP_SNAP_DISTANCE.get();
-            return ways.stream()
-                .filter(way -> wayAreaContains(way, point))
-                .findFirst()
-                .orElseGet(() -> ways.stream()
-                    .map(way -> new Pair<>(way, distanceSq(way, point)))
-                    // Acutally, it is snap way distance, but we don't have that as prop
-                    .filter(wd -> wd.b < snapDistance * snapDistance)
-                    .min(Comparator.comparing(wd -> wd.b))
-                    .map(wd -> wd.a)
-                    .orElse(null));
-        }
-    }
-
-    private double distanceSq(Way way, Point point) {
-        double minDistance = Double.POSITIVE_INFINITY;
-        for (int i = 0; i < way.getNodesCount() - 1; i++) {
-            Point2D pA = mapView.getState().getPointFor(way.getNode(i)).getInView();
-            Point2D pB = mapView.getState().getPointFor(way.getNode(i + 1)).getInView();
-            double c = pA.distanceSq(pB);
-            if (c < 1) {
-                continue;
-            }
-
-            double a = point.distanceSq(pB);
-            double b = point.distanceSq(pA);
-            if (a > c || b > c) {
-                continue;
-            }
-
-            double perDistSq = a - (a - b + c) * (a - b + c) / 4 / c;
-            minDistance = Math.min(perDistSq, minDistance);
-        }
-        return minDistance;
-    }
-
-    private boolean wayAreaContains(Way way, Point point) {
-        MapViewPath path = new MapViewPath(mapView.getState());
-        path.appendClosed(way.getNodes(), false);
-        return path.contains(point);
-    }
-
-    private BBox getBoundsAroundMouse(Point point, MapViewState state) {
-        Integer snapDistance = MapView.PROP_SNAP_DISTANCE.get();
-        MapViewRectangle rect = state.getForView(point.getX() - snapDistance, point.getY() - snapDistance)
-            .rectTo(state.getForView(point.getX() + snapDistance, point.getY() + snapDistance));
-        return rect.getLatLonBoundsBox().toBBox();
+        return getOsmPrimitiveAt(point, it -> !getAvailableActions(it).isEmpty());
     }
 
     @Override
-    protected void doAction(Point point) {
-        OsmPrimitive primitive = getPrimitiveAt(point);
-        if (primitive != null) {
-            OsmPrimitive originalPrimitive = dataSetCopy.findOriginal(primitive);
-            if (originalPrimitive != null) {
-                List<EStopVicinityAction> actions = getAvailableActions(originalPrimitive);
-                if (!actions.isEmpty()) {
-                    showActionsMenu(point, originalPrimitive, actions);
-                }
-            }
+    protected void doAction(Point point, OsmPrimitive originalPrimitive) {
+        List<EStopVicinityAction> actions = getAvailableActions(originalPrimitive);
+        if (!actions.isEmpty()) {
+            showActionsMenu(point, originalPrimitive, actions);
         }
     }
 
@@ -344,17 +254,16 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
         return actions;
     }
 
-    private Cascade getCascade(OsmPrimitive primitive) {
-        MultiCascade mc = new MultiCascade();
-        getStyle().apply(mc, primitive, 1, false);
-        return mc.getOrCreateCascade("default");
-    }
-
     private List<EStopVicinityAction> getAvailableActionsForNonmember(OsmPrimitive primitive) {
         Relation area = StopAreaUtils.findContainingStopArea(primitive);
         if (area != null && !area.equals(editorAccess.getEditor().getRelation())) {
             // If the item is in a different stop area, we don't allow adding it.
-            return Arrays.asList(EStopVicinityAction.OPEN_AREA_RELATION);
+            ArrayList<EStopVicinityAction> actions = new ArrayList<>();
+            actions.add(EStopVicinityAction.OPEN_AREA_RELATION);
+            if (null == StopAreaUtils.findParentStopGroup(area)) {
+                actions.add(EStopVicinityAction.CREATE_STOP_AREA_GROUP);
+            }
+            return actions;
         } else {
             Cascade cascade = getCascade(primitive);
             if (cascade.containsKey(CSS_CLASS_STOP_POSITION)) {
@@ -451,6 +360,36 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
                         ));
                     }));
                 }
+            }
+        },
+        CREATE_STOP_AREA_GROUP {
+            @Override
+            void addActionButtons(JPopupMenu menu, OsmPrimitive primitive, IRelationEditorActionAccess editorAccess) {
+                // Only works if our relation was already saved
+                boolean enabled = editorAccess.getEditor().getRelation() != null;
+
+                JMenuItem button = EStopVicinityAction.createActionButton(tr("Create area group with current area")
+                    + (enabled ? "" : " (" + tr("requires save") + ")"), () -> {
+                    Relation other = StopAreaUtils.findContainingStopArea(primitive);
+                    Relation me = editorAccess.getEditor().getRelation();
+
+                    Relation groupRelation = new Relation();
+                    groupRelation.setModified(true);
+
+                    groupRelation.put(OsmStopAreaGroupRelationTags.KEY_TYPE, OsmStopAreaGroupRelationTags.KEY_TYPE_VALUE_PUBLIC_TRANSPORT);
+                    groupRelation.put(OsmStopAreaGroupRelationTags.KEY_PUBLIC_TRANSPORT, OsmStopAreaGroupRelationTags.KEY_PUBLIC_TRANSPORT_VALUE_STOP_AREA_GROUP);
+
+                    groupRelation.addMember(new RelationMember("", me));
+                    groupRelation.addMember(new RelationMember("", other));
+
+                    DialogUtils.showRelationEditor(RelationEditor.getEditor(
+                        MainApplication.getLayerManager().getEditLayer(),
+                        groupRelation,
+                        null /* no selected members */
+                    ));
+                });
+                button.setEnabled(enabled);
+                menu.add(button);
             }
         },
         SET_ROLE_PLATFORM {

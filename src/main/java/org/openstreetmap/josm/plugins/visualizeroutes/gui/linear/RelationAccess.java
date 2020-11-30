@@ -118,4 +118,8 @@ public interface RelationAccess extends Tagged {
     default long getRelationId() {
         return -1;
     }
+
+    default boolean hasTag(String key, String value) {
+        return value.equals(get(key));
+    }
 }

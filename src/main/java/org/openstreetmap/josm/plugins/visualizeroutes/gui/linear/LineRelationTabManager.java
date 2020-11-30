@@ -8,6 +8,7 @@ import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorAction
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteMasterRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaRelationTags;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.AbstractTabManager;
 
 import java.awt.*;
 import java.util.Arrays;

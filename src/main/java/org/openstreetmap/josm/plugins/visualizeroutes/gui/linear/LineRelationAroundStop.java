@@ -1,21 +1,18 @@
 package org.openstreetmap.josm.plugins.visualizeroutes.gui.linear;
 
-import java.lang.reflect.Array;
+import org.openstreetmap.josm.data.osm.OsmPrimitive;
+import org.openstreetmap.josm.data.osm.Relation;
+import org.openstreetmap.josm.data.osm.RelationMember;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.StopAreaUtils;
+
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import org.openstreetmap.josm.data.osm.OsmPrimitive;
-import org.openstreetmap.josm.data.osm.Relation;
-import org.openstreetmap.josm.data.osm.RelationMember;
-import org.openstreetmap.josm.plugins.pt_assistant.utils.StopUtils;
 
 /**
  * Same as a {@link LineRelation}, but only the part around a given stop position
@@ -40,7 +37,7 @@ public class LineRelationAroundStop extends LineRelation {
         List<List<RelationMember>> stopsByStopArea = new ArrayList<>();
         Relation lastArea = null;
         for (RelationMember stop : stops) {
-            Relation area = StopUtils.findContainingStopArea(stop.getMember());
+            Relation area = StopAreaUtils.findContainingStopArea(stop.getMember());
             if (area != null && area == lastArea) {
                 stopsByStopArea.get(stopsByStopArea.size() - 1).add(stop);
             } else {
