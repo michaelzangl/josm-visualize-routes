@@ -13,6 +13,8 @@ import org.openstreetmap.josm.gui.dialogs.relation.RelationEditor;
 import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorActionAccess;
 import org.openstreetmap.josm.gui.draw.MapViewPath;
 import org.openstreetmap.josm.gui.layer.OsmDataLayer;
+import org.openstreetmap.josm.gui.mappaint.Cascade;
+import org.openstreetmap.josm.gui.mappaint.MultiCascade;
 import org.openstreetmap.josm.plugins.pt_assistant.data.DerivedDataSet;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmPlatformTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
@@ -48,6 +50,9 @@ import static org.openstreetmap.josm.tools.I18n.tr;
  * - add / remove stop_position
  */
 public class StopVicinityPanel extends AbstractVicinityPanel {
+    public static final String CSS_CLASS_PLATFORM = "platform";
+    public static final String CSS_CLASS_EMPTYMEMBER = "emptymember";
+    public static final String CSS_CLASS_STOP_POSITION = "stop_position";
     private final IRelationEditorActionAccess editorAccess;
 
     public StopVicinityPanel(IRelationEditorActionAccess editorAccess, ZoomSaver zoomSaver) {
@@ -73,6 +78,17 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
             //warnPanel.setLocation(10, 40);
             add(warnPanel, BorderLayout.NORTH);
         }
+
+        UnBoldLabel legend = new UnBoldLabel(
+            tr("blue: area relation member")
+            + " "
+            + tr("red: invalid relation member")
+            + " "
+            + (StopAreaUtils.findParentStopGroup(editorAccess.getEditor().getRelation()) != null
+                ?  tr("green: objects belonging to the same area group") : "")
+        );
+        legend.setBorder(new EmptyBorder(5, 5, 5, 5));
+        add(legend, BorderLayout.SOUTH);
     }
 
     private static DerivedDataSet createDataSetWithNewRelation(OsmDataLayer layer, Relation stopRelation,
@@ -310,23 +326,43 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
     }
 
     private List<EStopVicinityAction> getAvailableActionsForMember(OsmPrimitive primitive, String role) {
-        if (OsmStopAreaRelationTags.ROLE_PLATFORM.equals(role)) {
-            return Arrays.asList(EStopVicinityAction.REMOVE_FROM_STOP_AREA);
-        } else if (OsmStopAreaRelationTags.ROLE_STOP.equals(role)) {
-            return Arrays.asList(EStopVicinityAction.REMOVE_FROM_STOP_AREA);
-        } else {
-            return Collections.emptyList();
+        ArrayList<EStopVicinityAction> actions = new ArrayList<>();
+        actions.add(EStopVicinityAction.REMOVE_FROM_STOP_AREA);
+
+        Cascade defaultLayer = getCascade(primitive);
+        if (defaultLayer.containsKey(CSS_CLASS_PLATFORM) && !OsmStopAreaRelationTags.ROLE_PLATFORM.equals(role)) {
+            actions.add(EStopVicinityAction.SET_ROLE_PLATFORM);
         }
+        if (defaultLayer.containsKey(CSS_CLASS_EMPTYMEMBER) && !"".equals(role)) {
+            actions.add(EStopVicinityAction.SET_ROLE_EMPTY);
+        }
+        if (defaultLayer.containsKey(CSS_CLASS_STOP_POSITION) && !OsmStopAreaRelationTags.ROLE_STOP.equals(role)) {
+            actions.add(EStopVicinityAction.SET_ROLE_STOP);
+        }
+        return actions;
+    }
+
+    private Cascade getCascade(OsmPrimitive primitive) {
+        MultiCascade mc = new MultiCascade();
+        getStyle().apply(mc, primitive, 1, false);
+        return mc.getOrCreateCascade("default");
     }
 
     private List<EStopVicinityAction> getAvailableActionsForNonmember(OsmPrimitive primitive) {
-        if (OsmPlatformTags.isPlatform(primitive)) {
-            return Arrays.asList(EStopVicinityAction.ADD_PLATFORM_TO_STOP_AREA);
-        } else if (OsmPlatformTags.isStopPosition(primitive)
-            || isStopMemberInAnyRoute(primitive)) {
-            return Arrays.asList(EStopVicinityAction.ADD_STOP_TO_STOP_AREA);
+        if (StopAreaUtils.findContainingStopArea(primitive) != null) {
+            // If the item is in a different stop area, we don't allow adding it.
+            return Arrays.asList(EStopVicinityAction.OPEN_AREA_RELATION);
         } else {
-            return Collections.emptyList();
+            Cascade cascade = getCascade(primitive);
+            if (cascade.containsKey(CSS_CLASS_STOP_POSITION)) {
+                return Arrays.asList(EStopVicinityAction.ADD_STOP_TO_STOP_AREA);
+            } else if (cascade.containsKey(CSS_CLASS_PLATFORM)) {
+                return Arrays.asList(EStopVicinityAction.ADD_PLATFORM_TO_STOP_AREA);
+            } else if (cascade.containsKey(CSS_CLASS_EMPTYMEMBER)) {
+                return Arrays.asList(EStopVicinityAction.ADD_EMPTY_TO_STOP_AREA);
+            } else {
+                return Collections.emptyList();
+            }
         }
     }
 
@@ -362,6 +398,15 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
                 }));
             }
         },
+
+        ADD_EMPTY_TO_STOP_AREA {
+            @Override
+            void addActionButtons(JPopupMenu menu, OsmPrimitive primitive, IRelationEditorActionAccess editorAccess) {
+                menu.add(createActionButton(tr("Add this element to the stop area relation"), () -> {
+                    addMember(editorAccess, primitive, "");
+                }));
+            }
+        },
         // Remove any member
         REMOVE_FROM_STOP_AREA {
             @Override
@@ -388,7 +433,7 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
                     panel.setBorder(new EmptyBorder(5, 5, 5, 5));
                     panel.add(new UnBoldLabel("<html>" + tr("This element belongs to the stop area <i>{0}</i>",
                         UnBoldLabel.safeHtml(area.getName())) + "</html>"));
-                    if (StopAreaUtils.findParentStopGroup(area).equals(StopAreaUtils.findParentStopGroup(editorAccess.getEditor().getRelation()))) {
+                    if (Objects.equals(StopAreaUtils.findParentStopGroup(area), StopAreaUtils.findParentStopGroup(editorAccess.getEditor().getRelation()))) {
                         panel.add(new UnBoldLabel(tr("This element belongs to the same stop area group.")));
                     }
                     menu.add(panel);
@@ -404,8 +449,35 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
                     }));
                 }
             }
+        },
+        SET_ROLE_PLATFORM {
+            @Override
+            void addActionButtons(JPopupMenu menu, OsmPrimitive primitive, IRelationEditorActionAccess editorAccess) {
+                addActionButtonForRole(menu, primitive, editorAccess, OsmStopAreaRelationTags.ROLE_PLATFORM);
+            }
+        },
+        SET_ROLE_STOP {
+            @Override
+            void addActionButtons(JPopupMenu menu, OsmPrimitive primitive, IRelationEditorActionAccess editorAccess) {
+                addActionButtonForRole(menu, primitive, editorAccess, OsmStopAreaRelationTags.ROLE_STOP);
+            }
+        },
+        SET_ROLE_EMPTY {
+            @Override
+            void addActionButtons(JPopupMenu menu, OsmPrimitive primitive, IRelationEditorActionAccess editorAccess) {
+                addActionButtonForRole(menu, primitive, editorAccess, "");
+            }
+        };
+
+        private static void addActionButtonForRole(JPopupMenu menu, OsmPrimitive primitive, IRelationEditorActionAccess editorAccess, String role) {
+            menu.add(createActionButton(tr("Set role to ''{0}''", role), () -> {
+                for (int i = 0; i < editorAccess.getMemberTableModel().getRowCount(); i++) {
+                    if (editorAccess.getMemberTableModel().getValue(i).getMember().equals(primitive)) {
+                        editorAccess.getMemberTableModel().updateRole(new int[] {i}, role);
+                    }
+                }
+            }));
         }
-        ;
 
         private static void addMember(IRelationEditorActionAccess editorAccess, OsmPrimitive primitive, String role) {
             MemberTableModel table = editorAccess.getMemberTableModel();
