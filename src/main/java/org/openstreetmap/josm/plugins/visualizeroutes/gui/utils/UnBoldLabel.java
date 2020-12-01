@@ -1,6 +1,6 @@
 package org.openstreetmap.josm.plugins.visualizeroutes.gui.utils;
 
-import java.awt.Dimension;
+import java.awt.*;
 
 import javax.swing.JLabel;
 
@@ -20,4 +20,11 @@ public class UnBoldLabel extends JLabel {
         return text == null ? "" : text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 
+    public static Color fontColor(Color color) {
+        if ((color.getRed() + color.getGreen() + color.getBlue()) / 3 < 128) {
+            return Color.WHITE;
+        } else {
+            return Color.BLACK;
+        }
+    }
 }

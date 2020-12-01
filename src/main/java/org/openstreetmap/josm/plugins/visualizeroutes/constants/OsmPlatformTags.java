@@ -4,6 +4,7 @@ import org.openstreetmap.josm.data.osm.OsmPrimitive;
 import org.openstreetmap.josm.data.osm.Tagged;
 
 public class OsmPlatformTags {
+    public static final String KEY_REF = "ref";
     public static String KEY_RAILWAY = "railway";
     public static String KEY_HIGHWAY = "highway";
     public static String KEY_PUBLIC_TRANSPORT = "public_transport";

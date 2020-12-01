@@ -1,16 +1,10 @@
-package org.openstreetmap.josm.plugins.visualizeroutes.gui.linear;
+package org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.stops;
 
-import org.openstreetmap.josm.actions.AutoScaleAction;
 import org.openstreetmap.josm.actions.JosmAction;
-import org.openstreetmap.josm.actions.relation.EditRelationAction;
-import org.openstreetmap.josm.data.osm.OsmPrimitive;
-import org.openstreetmap.josm.data.osm.OsmPrimitiveType;
 import org.openstreetmap.josm.data.osm.Relation;
-import org.openstreetmap.josm.data.osm.RelationMember;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
-import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaRelationTags;
-import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.LineRelation.StopPositionEvent;
-import org.openstreetmap.josm.tools.ImageProvider;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.LineGridCell;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.lines.LineRelation;
 
 import javax.swing.*;
 import java.awt.*;
@@ -18,8 +12,6 @@ import java.awt.event.ActionEvent;
 import java.util.List;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static org.openstreetmap.josm.tools.I18n.tr;
 
 /**
  * Collects all stops that there are in several relations
@@ -130,8 +122,8 @@ public class StopCollector {
         int nextIndex = 0;
         boolean isCollectingDownward = true;
         StopWithNotes lastStopFound = null;
-        List<StopPositionEvent> stopEvents = collectFor.findStopPositions();
-        for (StopPositionEvent event : stopEvents) {
+        List<LineRelation.StopPositionEvent> stopEvents = collectFor.findStopPositions();
+        for (LineRelation.StopPositionEvent event : stopEvents) {
             FoundStopPosition stop = new FoundStopPosition(event.getStop());
             Optional<FoundStop> alreadyFoundStop = findStop(stop);
             FoundStop actualStop;
@@ -162,7 +154,7 @@ public class StopCollector {
                     // For this, we need to skip ahead and search the first stop that matches
                     // TODO: This code is not really efficcient
                     List<Integer> nextPositions = stopEvents.stream()
-                        .map(StopPositionEvent::getStop)
+                        .map(LineRelation.StopPositionEvent::getStop)
                         .map(FoundStopPosition::new)
                         .map(this::findStop)
                         .filter(Optional::isPresent)
@@ -199,7 +191,7 @@ public class StopCollector {
 
     private Optional<FoundStop> findStop(FoundStopPosition stop) {
         return allStops.stream()
-            .filter(it -> it.matches(stop.member.getMember()))
+            .filter(it -> it.matches(stop.getMember().getMember()))
             .findFirst();
     }
 
@@ -222,7 +214,7 @@ public class StopCollector {
                 + (line.isPrimary() ? 1_000_000 : 0);
         }
 
-        public List<StopPositionEvent> findStopPositions() {
+        public List<LineRelation.StopPositionEvent> findStopPositions() {
             return line.streamStops().collect(Collectors.toList());
         }
 
@@ -259,136 +251,6 @@ public class StopCollector {
             }
 
             // TODO: Add to notes: stop.member.getMember().get("ref")
-        }
-    }
-
-    public interface FoundStop {
-        boolean isIncomplete();
-
-        boolean matches(OsmPrimitive p);
-
-        String getNameAndInfos();
-
-        default Component createActionButtons() {
-            return null;
-        }
-    }
-
-    private static class FoundStopPosition implements FoundStop {
-        private final RelationMember member;
-
-        FoundStopPosition(RelationMember member) {
-            if (!OsmRouteRelationTags.STOP_AND_PLATFORM_ROLES.contains(member.getRole())) {
-                throw new IllegalArgumentException("Not a stop position: " + member);
-            }
-            this.member = member;
-        }
-
-        Optional<Relation> findStopArea() {
-            return member.getMember().getReferrers()
-                .stream()
-                .filter(it -> it.getType() == OsmPrimitiveType.RELATION
-                    && OsmStopAreaRelationTags.isStopArea((Relation) it)
-                )
-                .map(it -> (Relation) it)
-                .findFirst();
-        }
-
-        EntryExit entryExit() {
-            return EntryExit.ofRole(member.getRole());
-        }
-
-        @Override
-        public boolean isIncomplete() {
-            return member.getMember().isIncomplete();
-        }
-
-        @Override
-        public boolean matches(OsmPrimitive p) {
-            return this.member.getMember().equals(p);
-        }
-
-        @Override
-        public String getNameAndInfos() {
-            String name = member.getMember().get("name");
-            return (name == null ? tr("- Stop without name -") : name);
-        }
-
-        @Override
-        public Component createActionButtons() {
-            return PublicTransportLinePanel.createActions(
-                PublicTransportLinePanel.createAction(
-                    tr("Zoom to stop position"),
-                    new ImageProvider("mapmode", "zoom"),
-                    () -> {
-                        member.getMember().getDataSet().setSelected(member.getMember());
-                        AutoScaleAction.autoScale(AutoScaleAction.AutoScaleMode.SELECTION);
-                    }
-                )
-            );
-        }
-    }
-
-    private static class FoundStopArea implements FoundStop {
-        private final List<RelationMember> stops;
-        private final Relation relation;
-
-        FoundStopArea(Relation relation) {
-            stops = relation.getMembers()
-                .stream()
-                .filter(m -> OsmStopAreaRelationTags.ROLE_STOP.equals(m.getRole()))
-                .collect(Collectors.toList());
-            this.relation = relation;
-        }
-
-        @Override
-        public boolean isIncomplete() {
-            return relation.isIncomplete();
-        }
-
-        @Override
-        public boolean matches(OsmPrimitive p) {
-            // Many are not marked as stop => we still want to get them.
-            return this.relation
-                .getMembers()
-                .stream().anyMatch(s -> s.getMember().equals(p));
-        }
-
-        @Override
-        public String getNameAndInfos() {
-            String name = relation.get("name");
-            return (name == null ? tr("- No name -") : name) + " (" + tr("area relation {0}", relation.getId()) + ")";
-        }
-
-        @Override
-        public Component createActionButtons() {
-            return PublicTransportLinePanel.createActions(
-                PublicTransportLinePanel.createAction(tr("Zoom to stop area relation"), new ImageProvider("mapmode", "zoom").setMaxSize(12),
-                    () -> {
-                        relation.getDataSet().setSelected(relation);
-                        AutoScaleAction.autoScale(AutoScaleAction.AutoScaleMode.SELECTION);
-                    }),
-                PublicTransportLinePanel.createAction(tr("Edit stop area"), new ImageProvider("dialogs", "edit"),
-                    () -> EditRelationAction.launchEditor(relation))
-            );
-        }
-
-    }
-
-    private static class NopStop implements FoundStop {
-        @Override
-        public boolean isIncomplete() {
-            return false;
-        }
-
-        @Override
-        public boolean matches(OsmPrimitive p) {
-            return false;
-        }
-
-        @Override
-        public String getNameAndInfos() {
-            return "";
         }
     }
 

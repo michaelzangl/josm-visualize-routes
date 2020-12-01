@@ -1,5 +1,7 @@
 package org.openstreetmap.josm.plugins.visualizeroutes.gui.linear;
 
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.stops.EntryExit;
+
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -112,7 +114,7 @@ public class LineGridCell extends JPanel {
             setLinePaint(graphics2D);
             Path2D.Double path = new Path2D.Double();
             int y = down ? yMin : yMax;
-            int cx = (xMax - xMin) / 2;
+            int cx = (xMax + xMin) / 2;
             path.moveTo(cx - 5, y);
             path.lineTo(cx + 5, y);
             path.lineTo(cx, y + 8 * (down ? 1 : -1));
@@ -138,6 +140,8 @@ public class LineGridCell extends JPanel {
 
     @Override
     protected void paintComponent(Graphics g) {
+        g.setColor(getBackground());
+        g.fillRect(0, 0, getWidth(), getHeight());
         toPaint.forEach(it -> it.accept((Graphics2D) g));
     }
 

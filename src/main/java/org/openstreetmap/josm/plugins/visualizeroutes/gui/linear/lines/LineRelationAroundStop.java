@@ -1,8 +1,9 @@
-package org.openstreetmap.josm.plugins.visualizeroutes.gui.linear;
+package org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.lines;
 
 import org.openstreetmap.josm.data.osm.OsmPrimitive;
 import org.openstreetmap.josm.data.osm.Relation;
 import org.openstreetmap.josm.data.osm.RelationMember;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationAccess;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.StopAreaUtils;
 
 import java.util.ArrayList;
@@ -31,6 +32,24 @@ public class LineRelationAroundStop extends LineRelation {
     }
 
     @Override
+    public LineRefKey getLineRefKey() {
+        List<OsmPrimitive> platforms = getRelation().getMembers()
+            .stream()
+            .filter(it -> it.getRole().equals("platform"))
+            .map(RelationMember::getMember)
+            .filter(isStop)
+            .distinct()
+            .collect(Collectors.toList());
+        if (platforms.size() == 1) {
+            return new LineRefKeyPlatform(platforms.get(0));
+        } else if (platforms.isEmpty()) {
+            return new LineRefKeyEmpty();
+        } else {
+            return new LineRefKeyPlatforms(platforms);
+        }
+    }
+
+    @Override
     public Stream<StopPositionEvent> streamStops() {
         List<RelationMember> stops = streamRawStops().collect(Collectors.toList());
 
@@ -46,8 +65,8 @@ public class LineRelationAroundStop extends LineRelation {
             lastArea = area;
         }
 
-        List<Integer> indexesAtWhichOurStopIs = IntStream.range(0, stops.size())
-            .filter(i -> stopsByStopArea.stream().anyMatch(s -> isStop.test(stops.get(i).getMember())))
+        List<Integer> indexesAtWhichOurStopIs = IntStream.range(0, stopsByStopArea.size())
+            .filter(i -> stopsByStopArea.get(i).stream().anyMatch(s -> isStop.test(s.getMember())))
             .boxed()
             .collect(Collectors.toList());
 

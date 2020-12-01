@@ -1,8 +1,8 @@
-package org.openstreetmap.josm.plugins.visualizeroutes.gui.linear;
+package org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.stops;
 
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
 
-enum EntryExit {
+public enum EntryExit {
     ENTRY,
     EXIT,
     BOTH;
