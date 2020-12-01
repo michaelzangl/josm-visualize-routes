@@ -40,8 +40,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public abstract class AbstractVicinityPanel extends JPanel {
-    // TODO: On remove, clean up dataSetCopy
-
     protected final DerivedDataSet dataSetCopy;
     protected final IRelationEditorActionAccess editorAccess;
     protected final MapView mapView;
@@ -247,12 +245,17 @@ public abstract class AbstractVicinityPanel extends JPanel {
          * @param point The point, may be null.
          */
         private void updateMousePosition(Point point) {
-            OsmPrimitive toHighlight = point == null ? null : getPrimitiveAt(point);
-            if (toHighlight == null) {
-                dataSetCopy.highlight(Collections.emptySet());
-            } else {
-                dataSetCopy.highlight(Collections.singleton(toHighlight));
-            }
+            Set<OsmPrimitive> toHighlight = point == null ? Collections.emptySet() : getToHighlightFor(point);
+            dataSetCopy.highlight(toHighlight);
+        }
+    }
+
+    protected Set<OsmPrimitive> getToHighlightFor(Point point) {
+        OsmPrimitive toHighlight = getPrimitiveAt(point);
+        if (toHighlight == null) {
+            return Collections.emptySet();
+        } else {
+            return Collections.singleton(toHighlight);
         }
     }
 

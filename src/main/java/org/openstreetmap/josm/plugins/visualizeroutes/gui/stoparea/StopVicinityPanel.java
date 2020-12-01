@@ -69,12 +69,13 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
         }
 
         UnBoldLabel legend = new UnBoldLabel(
-            tr("blue: area relation member")
-            + " "
-            + tr("red: invalid relation member")
-            + " "
-            + (StopAreaUtils.findParentStopGroup(editorAccess.getEditor().getRelation()) != null
-                ?  tr("green: objects belonging to the same area group") : "")
+            tr("Blue: area relation member")
+                + " | "
+                + tr("Red: invalid relation member")
+                + " | "
+                + tr("Orange: member in two stop areas")
+                + (StopAreaUtils.findParentStopGroup(editorAccess.getEditor().getRelation()) != null
+                ? " | " + tr("Green: objects belonging to the same area group") : "")
         );
         legend.setBorder(new EmptyBorder(5, 5, 5, 5));
         add(legend, BorderLayout.SOUTH);
@@ -120,6 +121,7 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
                         .flatMap(parent -> ((Relation) parent).getMembers().stream())
                         .map(RelationMember::getMember)
                         .filter(sibling -> sibling != stopRelation)
+                        .filter(sibling -> sibling instanceof Relation) // < some group relations contain invalid members
                         .forEach(sibling -> {
                             Relation copy = new Relation((Relation) sibling);
                             copy.put("siblingOfActive", "1");

@@ -7,6 +7,8 @@ import java.awt.event.ActionEvent;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.swing.JComponent;
 import javax.swing.JMenuItem;
@@ -59,6 +61,24 @@ public class StopAreaGroupPanel extends AbstractVicinityPanel {
     @Override
     protected void doInitialZoom() {
         zoomToEditorRelation();
+    }
+
+    @Override
+    protected Set<OsmPrimitive> getToHighlightFor(Point point) {
+        OsmPrimitive primitive = getPrimitiveAt(point);
+        if (primitive == null) {
+            return Collections.emptySet();
+        }
+        Relation area = StopUtils.findContainingStopArea(primitive);
+        if (area == null) {
+            return Collections.emptySet();
+        } else {
+            return area
+                .getMembers()
+                .stream()
+                .map(RelationMember::getMember)
+                .collect(Collectors.toSet());
+        }
     }
 
     @Override
