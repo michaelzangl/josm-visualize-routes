@@ -2,6 +2,7 @@ package org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea;
 
 import static org.openstreetmap.josm.tools.I18n.tr;
 
+import java.awt.BorderLayout;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.util.Arrays;
@@ -56,11 +57,17 @@ public class StopAreaGroupPanel extends AbstractVicinityPanel {
                     && (OsmStopAreaRelationTags.isStopArea((Relation) primitive) || OsmRouteRelationTags.isV2PtRoute(primitive));
             }
         }, editorAccess, zoomSaver);
-    }
 
-    @Override
-    protected void doInitialZoom() {
-        zoomToEditorRelation();
+        if (RelationAccess.of(editorAccess)
+            .getMembers()
+            .stream()
+            .anyMatch(it ->
+                it.getMember().isIncomplete()
+                    || it.isRelation() && it.getRelation().getMembers().stream().anyMatch(r -> r.getMember().isIncomplete())
+            )) {
+            add(new IncompleteMembersWarningPanel(), BorderLayout.NORTH);
+        }
+
     }
 
     @Override
@@ -69,7 +76,7 @@ public class StopAreaGroupPanel extends AbstractVicinityPanel {
         if (primitive == null) {
             return Collections.emptySet();
         }
-        Relation area = StopUtils.findContainingStopArea(primitive);
+        Relation area = StopAreaUtils.findContainingStopArea(primitive);
         if (area == null) {
             return Collections.emptySet();
         } else {
@@ -94,7 +101,7 @@ public class StopAreaGroupPanel extends AbstractVicinityPanel {
     }
 
     @Override
-    protected void doAction(Point point, OsmPrimitive originalPrimitive) {
+    protected void doAction(Point point, OsmPrimitive derivedPrimitive, OsmPrimitive originalPrimitive) {
         Relation area = StopAreaUtils.findContainingStopArea(originalPrimitive);
         if (area == null) {
             return;

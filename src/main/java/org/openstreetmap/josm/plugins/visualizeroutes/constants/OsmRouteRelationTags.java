@@ -2,6 +2,7 @@ package org.openstreetmap.josm.plugins.visualizeroutes.constants;
 
 import org.openstreetmap.josm.data.osm.Tagged;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -52,6 +53,7 @@ public class OsmRouteRelationTags {
     public static final String KEY_OPERATOR = "operator";
     public static final String KEY_NETWORK = "network";
 
+    public static final Collection<String> ROLES_SEGMENT = Arrays.asList("", "hail_and_ride");
 
     public static boolean isV2PtRoute(Tagged tagged) {
         return isRoute(tagged) && tagged.hasTag(KEY_PUBLIC_TRANSPORT_VERSION, KEY_PUBLIC_TRANSPORT_VERSION_VALUE_TWO);

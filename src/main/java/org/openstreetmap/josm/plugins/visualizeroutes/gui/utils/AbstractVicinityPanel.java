@@ -144,7 +144,9 @@ public abstract class AbstractVicinityPanel extends JPanel {
         });
     }
 
-    protected abstract void doInitialZoom();
+    protected void doInitialZoom() {
+        zoomToEditorRelation();
+    }
 
     protected List<MapCSSStyleSource> readStyles() {
         return getStylePath()
@@ -202,13 +204,15 @@ public abstract class AbstractVicinityPanel extends JPanel {
         OsmPrimitive primitive = getPrimitiveAt(point);
         if (primitive != null) {
             OsmPrimitive originalPrimitive = dataSetCopy.findOriginal(primitive);
+            // Sometimes, we may have an old/faked copy. Get the real one then.
+            originalPrimitive = editorAccess.getEditor().getLayer().getDataSet().getPrimitiveById(originalPrimitive);
             if (originalPrimitive != null) {
-                doAction(point, originalPrimitive);
+                doAction(point, primitive, originalPrimitive);
             }
         }
     }
 
-    protected void doAction(Point point, OsmPrimitive originalPrimitive) {
+    protected void doAction(Point point, OsmPrimitive derivedPrimitive, OsmPrimitive originalPrimitive) {
         // nop
     }
 
