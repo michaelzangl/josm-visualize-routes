@@ -1,4 +1,4 @@
-package org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea;
+package org.openstreetmap.josm.plugins.visualizeroutes.gui.utils;
 
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.UnBoldLabel;
 

@@ -3,19 +3,19 @@ package org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea;
 import org.openstreetmap.josm.actions.AutoScaleAction;
 import org.openstreetmap.josm.actions.AutoScaleAction.AutoScaleMode;
 import org.openstreetmap.josm.actions.JosmAction;
-import org.openstreetmap.josm.data.osm.*;
+import org.openstreetmap.josm.data.osm.OsmPrimitive;
+import org.openstreetmap.josm.data.osm.OsmPrimitiveType;
+import org.openstreetmap.josm.data.osm.Relation;
+import org.openstreetmap.josm.data.osm.RelationMember;
 import org.openstreetmap.josm.gui.MainApplication;
 import org.openstreetmap.josm.gui.dialogs.relation.MemberTableModel;
 import org.openstreetmap.josm.gui.dialogs.relation.RelationEditor;
 import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorActionAccess;
-import org.openstreetmap.josm.gui.layer.OsmDataLayer;
 import org.openstreetmap.josm.gui.mappaint.Cascade;
-import org.openstreetmap.josm.plugins.pt_assistant.data.DerivedDataSet;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaGroupRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationAccess;
-import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationEditorAccessUtils;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.*;
 import org.openstreetmap.josm.plugins.visualizeroutes.utils.DownloadUtils;
 
@@ -38,14 +38,13 @@ import static org.openstreetmap.josm.tools.I18n.tr;
  * - add / remove platform
  * - add / remove stop_position
  */
-public class StopVicinityPanel extends AbstractVicinityPanel {
+public class StopVicinityPanel extends AbstractVicinityPanel<StopVicinityDerivedDataSet> {
     public static final String CSS_CLASS_PLATFORM = "platform";
     public static final String CSS_CLASS_EMPTYMEMBER = "emptymember";
     public static final String CSS_CLASS_STOP_POSITION = "stop_position";
 
     public StopVicinityPanel(IRelationEditorActionAccess editorAccess, ZoomSaver zoomSaver) {
-        super(createDataSetWithNewRelation(editorAccess.getEditor().getLayer(),
-            editorAccess.getEditor().getRelation(), editorAccess), editorAccess, zoomSaver);
+        super(new StopVicinityDerivedDataSet(editorAccess), editorAccess, zoomSaver);
 
         if (RelationAccess.of(editorAccess)
                 .getMembers()
@@ -66,65 +65,6 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
         legend.setBorder(new EmptyBorder(5, 5, 5, 5));
         add(legend, BorderLayout.SOUTH);
     }
-
-    private static DerivedDataSet createDataSetWithNewRelation(OsmDataLayer layer, Relation stopRelation,
-                                                               IRelationEditorActionAccess editorAccess) {
-        long editedRelationId = stopRelation == null ? 0 : stopRelation.getId();
-        BBox bBox = new BBox();
-        RelationEditorAccessUtils.streamMembers(editorAccess)
-            // Extra space: Something around 200.500m depending on where we are on the map.
-            .forEach(p -> bBox.addPrimitive(p.getMember(), 0.005));
-
-        return new DerivedDataSet(layer.getDataSet()) {
-            @Override
-            protected boolean isIncluded(OsmPrimitive primitive) {
-                return primitive.getType() != OsmPrimitiveType.RELATION
-                    // Normal primitives: all in bbox
-                    ? bBox.intersects(primitive.getBBox())
-                    // Relations: all except the one we edit
-                    // todo: restrict this, e.g. only PT relations + multipolygons in bbox
-                    : primitive.getId() != editedRelationId;
-            }
-
-            @Override
-            protected void addAdditionalGeometry(AdditionalGeometryAccess addTo) {
-                // Now apply the relation editor changes
-                // Simulate org.openstreetmap.josm.gui.dialogs.relation.actions.SavingAction.applyChanges
-                Relation relation = new Relation();
-                editorAccess.getTagModel().applyToPrimitive(relation);
-                // This is a hack to tag our currently active relation.
-                // There is no id selector in MapCSS, so we need a way to uniquely identify our relation
-                relation.put("activePtRelation", "1");
-
-                if (stopRelation != null) {
-                    addTo.addAsCopy(stopRelation, relation);
-
-                    // Now we search for all sibling relations.
-                    // Due to https://josm.openstreetmap.de/ticket/6129#comment:24 we cannot do it in MapCSS
-                    stopRelation.getReferrers()
-                        .stream()
-                        .filter(r -> r instanceof Relation && OsmStopAreaGroupRelationTags.isStopAreaGroup((Relation) r))
-                        .flatMap(parent -> ((Relation) parent).getMembers().stream())
-                        .map(RelationMember::getMember)
-                        .filter(sibling -> sibling != stopRelation)
-                        .filter(sibling -> sibling instanceof Relation) // < some group relations contain invalid members
-                        .forEach(sibling -> {
-                            Relation copy = new Relation((Relation) sibling);
-                            copy.put("siblingOfActive", "1");
-                            // This will add the copy with the fake tag.
-                            addOrGetDerived(copy);
-                        });
-
-                } else {
-                    addTo.add(relation);
-                }
-
-                RelationEditorAccessUtils.getRelationMembers(editorAccess)
-                    .forEach(m -> relation.addMember(addOrGetDerivedMember(m)));
-            }
-        };
-    }
-
 
     @Override
     protected JComponent generateActionButtons() {

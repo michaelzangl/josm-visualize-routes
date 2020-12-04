@@ -30,6 +30,10 @@ public class RouteTraverser {
         this.segments = findSegments();
     }
 
+    public RouteType getType() {
+        return type;
+    }
+
     public List<RouteStop> findStopPositions() {
         List<List<RelationMember>> groupedByStop = groupByStop();
 
