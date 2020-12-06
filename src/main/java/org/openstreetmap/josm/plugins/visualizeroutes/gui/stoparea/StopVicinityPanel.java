@@ -81,7 +81,7 @@ public class StopVicinityPanel extends AbstractVicinityPanel<StopVicinityDerived
             @Override
             public void actionPerformed(ActionEvent e) {
                 DownloadUtils.downloadUsingOverpass(
-                    "org/openstreetmap/josm/plugins/pt_assistant/gui/linear/downloadStopAreaVicinity.query.txt",
+                    "org/openstreetmap/josm/plugins/visualizeroutes/gui/linear/downloadStopAreaVicinity.query.txt",
                     line -> line
                         .replace("##NODEIDS##", DownloadUtils.collectMemberIds(RelationAccess.of(editorAccess), OsmPrimitiveType.NODE))
                         .replace("##WAYIDS##", DownloadUtils.collectMemberIds(RelationAccess.of(editorAccess), OsmPrimitiveType.WAY))

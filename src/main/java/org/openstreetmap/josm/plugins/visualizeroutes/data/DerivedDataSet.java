@@ -1,4 +1,4 @@
-package org.openstreetmap.josm.plugins.pt_assistant.data;
+package org.openstreetmap.josm.plugins.visualizeroutes.data;
 
 import java.util.ArrayList;
 import java.util.Collections;

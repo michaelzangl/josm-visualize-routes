@@ -2,8 +2,8 @@ package org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea;
 
 import org.openstreetmap.josm.data.osm.*;
 import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorActionAccess;
-import org.openstreetmap.josm.plugins.pt_assistant.data.DerivedDataSet;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaGroupRelationTags;
+import org.openstreetmap.josm.plugins.visualizeroutes.data.DerivedDataSet;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationEditorAccessUtils;
 
 class StopVicinityDerivedDataSet extends DerivedDataSet {

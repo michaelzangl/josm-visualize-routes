@@ -12,6 +12,7 @@ import java.util.Set;
 
 import org.openstreetmap.josm.data.osm.Node;
 import org.openstreetmap.josm.data.osm.Way;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.router.RouteTarget;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.transportmode.RouteType;
 
 /**

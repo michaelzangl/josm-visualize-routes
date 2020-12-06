@@ -7,8 +7,8 @@ import org.openstreetmap.josm.data.osm.OsmPrimitive;
 import org.openstreetmap.josm.data.osm.Relation;
 import org.openstreetmap.josm.data.osm.Way;
 import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorActionAccess;
-import org.openstreetmap.josm.plugins.pt_assistant.data.DerivedDataSet;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
+import org.openstreetmap.josm.plugins.visualizeroutes.data.DerivedDataSet;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationAccess;
 
 import static org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.RoutingPanel.*;

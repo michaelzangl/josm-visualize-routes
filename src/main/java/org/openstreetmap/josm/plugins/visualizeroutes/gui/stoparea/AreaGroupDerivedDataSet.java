@@ -4,9 +4,9 @@ import org.openstreetmap.josm.data.osm.OsmPrimitive;
 import org.openstreetmap.josm.data.osm.Relation;
 import org.openstreetmap.josm.data.osm.RelationMember;
 import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorActionAccess;
-import org.openstreetmap.josm.plugins.pt_assistant.data.DerivedDataSet;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaRelationTags;
+import org.openstreetmap.josm.plugins.visualizeroutes.data.DerivedDataSet;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationAccess;
 
 public class AreaGroupDerivedDataSet extends DerivedDataSet {

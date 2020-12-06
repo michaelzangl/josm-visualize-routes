@@ -57,8 +57,8 @@ public class StopAreaGroupPanel extends AbstractVicinityPanel<AreaGroupDerivedDa
     @Override
     protected List<String> getStylePath() {
         return Arrays.asList(
-            "org/openstreetmap/josm/plugins/pt_assistant/gui/stoparea/ptbackground.mapcss",
-            "org/openstreetmap/josm/plugins/pt_assistant/gui/stoparea/stopareagroup.mapcss");
+            "org/openstreetmap/josm/plugins/visualizeroutes/gui/stoparea/ptbackground.mapcss",
+            "org/openstreetmap/josm/plugins/visualizeroutes/gui/stoparea/stopareagroup.mapcss");
     }
 
     @Override

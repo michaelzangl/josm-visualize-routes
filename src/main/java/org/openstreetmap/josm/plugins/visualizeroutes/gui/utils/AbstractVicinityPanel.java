@@ -23,14 +23,17 @@ import org.openstreetmap.josm.gui.mappaint.ElemStyles;
 import org.openstreetmap.josm.gui.mappaint.MultiCascade;
 import org.openstreetmap.josm.gui.mappaint.StyleSource;
 import org.openstreetmap.josm.gui.mappaint.mapcss.MapCSSStyleSource;
-import org.openstreetmap.josm.plugins.pt_assistant.data.DerivedDataSet;
+import org.openstreetmap.josm.plugins.visualizeroutes.data.DerivedDataSet;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationAccess;
 import org.openstreetmap.josm.tools.Pair;
 import org.openstreetmap.josm.tools.Utils;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.awt.geom.Point2D;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -45,6 +48,7 @@ public abstract class AbstractVicinityPanel<D extends DerivedDataSet> extends JP
     protected final IRelationEditorActionAccess editorAccess;
     protected final MapView mapView;
     private final List<MapCSSStyleSource> style = Collections.unmodifiableList(readStyles());
+    private JComponent actionButtons;
 
     public AbstractVicinityPanel(D dataSetCopy,
                                  IRelationEditorActionAccess editorAccess,
@@ -98,27 +102,28 @@ public abstract class AbstractVicinityPanel<D extends DerivedDataSet> extends JP
     }
 
     private void addActionButtons() {
-        JComponent actionButtons = generateActionButtons();
+        actionButtons = generateActionButtons();
         if (actionButtons == null) {
             return;
         }
-        actionButtons.setSize(actionButtons.getPreferredSize());
-        setLocationToTopRight(mapView, actionButtons);
         mapView.add(actionButtons);
-        mapView.addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent e) {
-                setLocationToTopRight(mapView, actionButtons);
-            }
-
-            @Override
-            public void componentShown(ComponentEvent e) {
-                setLocationToTopRight(mapView, actionButtons);
-            }
-        });
+        reLayoutActionButtons();
     }
 
-    private void setLocationToTopRight(MapView mapView, JComponent actionButtons) {
+    @Override
+    public void doLayout() {
+        super.doLayout();
+        reLayoutActionButtons();
+    }
+
+    protected void reLayoutActionButtons() {
+        if (actionButtons != null) {
+            actionButtons.setSize(actionButtons.getPreferredSize());
+            setLocationToTopRight(actionButtons);
+        }
+    }
+
+    private void setLocationToTopRight(JComponent actionButtons) {
         actionButtons.setLocation(mapView.getWidth() - actionButtons.getWidth() - 10, 10);
     }
 
