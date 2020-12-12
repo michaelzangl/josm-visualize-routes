@@ -1,13 +1,13 @@
 package org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.router;
 
-import java.util.LinkedList;
-import java.util.stream.Stream;
-
 import org.openstreetmap.josm.data.osm.Node;
 import org.openstreetmap.josm.data.osm.Way;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.RouteSegmentWay;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.transportmode.RouteType;
 import org.openstreetmap.josm.tools.Pair;
+
+import java.util.LinkedList;
+import java.util.stream.Stream;
 
 /**
  * Allows to find possible routes after a given way segment.
@@ -66,5 +66,13 @@ public class FromSegmentRouter extends AbstractRouter {
         return super.findWaysThatCanBeSplit()
             // Don't go back to previous way
             .filter(it -> it != startAfter.getWay());
+    }
+
+    @Override
+    public String toString() {
+        return "FromSegmentRouter{" +
+            "type=" + type +
+            ", startAfter=" + startAfter +
+            '}';
     }
 }

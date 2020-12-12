@@ -120,7 +120,7 @@ public abstract class AbstractRouter {
                 })
                 .filter(Objects::nonNull)
                 // Exclude the ones that we cannot go on.
-                .filter(it -> it.getSuitability() == WaySuitability.GOOD)
+                .filter(this::isWaySuitable)
                 // Handle the way segments => schedule them and mark their parent
                 .forEach(it -> {
                     parents.put(it, next);
@@ -128,6 +128,10 @@ public abstract class AbstractRouter {
                 });
         }
         return targets;
+    }
+
+    protected boolean isWaySuitable(RouteSegmentWay it) {
+        return it.getSuitability() == WaySuitability.GOOD;
     }
 
     protected RouteTarget createRouteTarget(LinkedList<RouteSegmentWay> trace) {
