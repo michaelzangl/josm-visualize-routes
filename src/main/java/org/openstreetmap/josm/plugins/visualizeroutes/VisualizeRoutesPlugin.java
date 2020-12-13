@@ -4,6 +4,7 @@ import org.openstreetmap.josm.gui.dialogs.relation.RelationEditorHooks;
 import org.openstreetmap.josm.plugins.Plugin;
 import org.openstreetmap.josm.plugins.PluginInformation;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.LineRelationTabManager;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.members.MembersTableEnhancer;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.RoutingTabManager;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea.StopAreaTabManager;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea.StopVicinityTabManager;
@@ -32,6 +33,7 @@ public class VisualizeRoutesPlugin extends Plugin {
                 new StopVicinityTabManager(editorAccess);
                 new StopAreaTabManager(editorAccess);
                 new RoutingTabManager(editorAccess);
+                new MembersTableEnhancer(editorAccess);
             });
             // Don't add actions.
             return List.of();

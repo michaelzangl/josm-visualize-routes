@@ -122,4 +122,8 @@ public interface RelationAccess extends Tagged {
     default boolean hasTag(String key, String value) {
         return value.equals(get(key));
     }
+
+    default boolean isMultipolygon() {
+        return hasTag("type", "multipolygon");
+    }
 }
