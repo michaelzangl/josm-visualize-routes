@@ -1,5 +1,6 @@
 package org.openstreetmap.josm.plugins.visualizeroutes;
 
+import org.openstreetmap.josm.actions.ExtensionFileFilter;
 import org.openstreetmap.josm.gui.dialogs.relation.RelationEditorHooks;
 import org.openstreetmap.josm.plugins.Plugin;
 import org.openstreetmap.josm.plugins.PluginInformation;
@@ -22,6 +23,8 @@ public class VisualizeRoutesPlugin extends Plugin {
         super(info);
         addTabs();
         // TODO: MainMenu.add(menu, new AddStopAreaAction());
+
+        ExtensionFileFilter.addImporter(new org.openstreetmap.josm.plugins.visualizeroutes.gtfs.GtfsImporter());
     }
 
     private void addTabs() {
