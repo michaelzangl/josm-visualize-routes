@@ -30,4 +30,8 @@ public class StopAreaHeadline extends JPanel {
         }), BorderLayout.EAST);
     }
 
+    @Override
+    public Dimension getMaximumSize() {
+        return new Dimension(super.getMaximumSize().width, super.getPreferredSize().height);
+    }
 }
