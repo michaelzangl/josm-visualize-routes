@@ -4,6 +4,7 @@ import org.openstreetmap.josm.actions.JosmAction;
 import org.openstreetmap.josm.data.osm.*;
 import org.openstreetmap.josm.data.osm.visitor.BoundingXYVisitor;
 import org.openstreetmap.josm.data.osm.visitor.OsmPrimitiveVisitor;
+import org.openstreetmap.josm.gui.MainApplication;
 import org.openstreetmap.josm.gui.MapView;
 import org.openstreetmap.josm.gui.MapViewState;
 import org.openstreetmap.josm.gui.MapViewState.MapViewPoint;
@@ -12,6 +13,7 @@ import org.openstreetmap.josm.gui.dialogs.relation.MemberTableModel;
 import org.openstreetmap.josm.gui.dialogs.relation.RelationEditor;
 import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorActionAccess;
 import org.openstreetmap.josm.gui.draw.MapViewPath;
+import org.openstreetmap.josm.gui.layer.LayerManager;
 import org.openstreetmap.josm.gui.layer.OsmDataLayer;
 import org.openstreetmap.josm.gui.mappaint.Cascade;
 import org.openstreetmap.josm.gui.mappaint.MultiCascade;
@@ -349,7 +351,8 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
     }
 
     private List<EStopVicinityAction> getAvailableActionsForNonmember(OsmPrimitive primitive) {
-        if (StopAreaUtils.findContainingStopArea(primitive) != null) {
+        Relation area = StopAreaUtils.findContainingStopArea(primitive);
+        if (area != null && !area.equals(editorAccess.getEditor().getRelation())) {
             // If the item is in a different stop area, we don't allow adding it.
             return Arrays.asList(EStopVicinityAction.OPEN_AREA_RELATION);
         } else {
@@ -495,6 +498,7 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
                 }
             });
         }
+
     }
 
     private class ActionsMenu extends JPopupMenu {
@@ -504,6 +508,10 @@ public class StopVicinityPanel extends AbstractVicinityPanel {
             for (EStopVicinityAction action : actions) {
                 action.addActionButtons(this, forPrimitive, editorAccess);
             }
+            add(EStopVicinityAction.createActionButton(tr("Select in main window"), () -> {
+                MainApplication.getLayerManager().getActiveDataSet()
+                    .setSelected(forPrimitive);
+            }));
         }
     }
 }
