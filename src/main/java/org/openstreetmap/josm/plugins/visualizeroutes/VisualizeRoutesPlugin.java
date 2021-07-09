@@ -4,10 +4,12 @@ import org.openstreetmap.josm.actions.ExtensionFileFilter;
 import org.openstreetmap.josm.gui.MainApplication;
 import org.openstreetmap.josm.gui.MainFrame;
 import org.openstreetmap.josm.gui.MainMenu;
+import org.openstreetmap.josm.gui.MapFrame;
 import org.openstreetmap.josm.gui.dialogs.relation.RelationEditorHooks;
 import org.openstreetmap.josm.plugins.Plugin;
 import org.openstreetmap.josm.plugins.PluginInformation;
 import org.openstreetmap.josm.plugins.visualizeroutes.actions.stoparea.AddStopAreaAction;
+import org.openstreetmap.josm.plugins.visualizeroutes.gtfs.gui.GtfsLayerSettingsPanel;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.LineRelationTabManager;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.members.MembersTableEnhancer;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.RoutingTabManager;
@@ -48,5 +50,13 @@ public class VisualizeRoutesPlugin extends Plugin {
             // Don't add actions.
             return List.of();
         });
+    }
+
+    @Override
+    public void mapFrameInitialized(MapFrame oldFrame, MapFrame newFrame) {
+        super.mapFrameInitialized(oldFrame, newFrame);
+        if (newFrame != null) {
+            GtfsLayerSettingsPanel.hackInto(newFrame);
+        }
     }
 }
