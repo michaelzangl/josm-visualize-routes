@@ -159,7 +159,7 @@ public class DerivedDataSet {
     }
 
     /**
-     * Should be called before every access => way more performant than
+     * Should be called before every access → way more performant than
      * keeping it up to date all the time, especially during downloads.
      */
     public final void refreshIfRequired() {

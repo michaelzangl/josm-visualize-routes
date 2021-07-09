@@ -42,9 +42,9 @@ public class Router {
 
     /**
      * Does a Dijkstra search around the start node to find the next possible ways the route may take.
-     * <br/>
+     * <br>
      * It will only return valid way endpoints as possible points the route could go to.
-     * <br/>
+     * <br>
      * Although we limit by the number of way segments,
      *
      * @param distance The minimum distance to search - in meters. Good if a road is split into many small parts.

@@ -7,9 +7,9 @@ import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationAccess;
 
 /**
  * A class to store the relation member indexes along with the member
- * <br/>
+ * <br>
  * A relation may contain the same member with the same role multiple times.
- * <br/>
+ * <br>
  * Some times, we mix relations (e.g. superroutes). Therefore, we store the relation the member originated from, too.
  */
 public class IndexedRelationMember {

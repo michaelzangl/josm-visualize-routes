@@ -68,7 +68,7 @@ public class RoutingPanel extends AbstractVicinityPanel<RoutingDerivedDataSet> {
             .getMembers()
             .stream()
             .anyMatch(it -> it.getMember().isIncomplete())) {
-            add(new IncompleteMembersWarningPanel(), BorderLayout.NORTH);
+            add(new IncompleteMembersWarningPanel(editorAccess), BorderLayout.NORTH);
         }
 
         setMode(defaultMode());

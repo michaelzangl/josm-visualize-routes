@@ -1,15 +1,20 @@
 package org.openstreetmap.josm.plugins.visualizeroutes;
 
 import org.openstreetmap.josm.actions.ExtensionFileFilter;
+import org.openstreetmap.josm.gui.MainApplication;
+import org.openstreetmap.josm.gui.MainFrame;
+import org.openstreetmap.josm.gui.MainMenu;
 import org.openstreetmap.josm.gui.dialogs.relation.RelationEditorHooks;
 import org.openstreetmap.josm.plugins.Plugin;
 import org.openstreetmap.josm.plugins.PluginInformation;
+import org.openstreetmap.josm.plugins.visualizeroutes.actions.stoparea.AddStopAreaAction;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.LineRelationTabManager;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.members.MembersTableEnhancer;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.RoutingTabManager;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea.StopAreaTabManager;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea.StopVicinityTabManager;
 
+import javax.swing.*;
 import java.awt.*;
 import java.util.List;
 
@@ -22,7 +27,9 @@ public class VisualizeRoutesPlugin extends Plugin {
     public VisualizeRoutesPlugin(PluginInformation info) {
         super(info);
         addTabs();
-        // TODO: MainMenu.add(menu, new AddStopAreaAction());
+        JMenu toolsMenu = MainApplication.getMenu().toolsMenu;
+        toolsMenu.addSeparator();
+        MainMenu.add(toolsMenu, new AddStopAreaAction());
 
         ExtensionFileFilter.addImporter(new org.openstreetmap.josm.plugins.visualizeroutes.gtfs.GtfsImporter());
     }

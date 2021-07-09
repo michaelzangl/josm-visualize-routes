@@ -9,9 +9,9 @@ import org.openstreetmap.josm.data.osm.Way;
 
 /**
  * A way that should be split at startAtIndex and endAtIndex
- * <br/>
+ * <br>
  * Both may be at the end of the way, indicating that that index should be ignored
- * <br/>
+ * <br>
  * startAtIndex and endAtIndex may be in any order on the way.
  * They define the direciton the new route segment should go: it starts at startAtIndex and goes towards endAtIndex
  */

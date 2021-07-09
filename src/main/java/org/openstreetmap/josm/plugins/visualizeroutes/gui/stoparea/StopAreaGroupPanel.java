@@ -31,7 +31,7 @@ public class StopAreaGroupPanel extends AbstractVicinityPanel<AreaGroupDerivedDa
                 it.getMember().isIncomplete()
                     || it.isRelation() && it.getRelation().getMembers().stream().anyMatch(r -> r.getMember().isIncomplete())
             )) {
-            add(new IncompleteMembersWarningPanel(), BorderLayout.NORTH);
+            add(new IncompleteMembersWarningPanel(editorAccess), BorderLayout.NORTH);
         }
 
     }

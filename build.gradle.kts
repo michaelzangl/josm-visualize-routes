@@ -3,7 +3,6 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 plugins {
   java
-  jacoco
   id("org.openstreetmap.josm") version "0.7.1"
 }
 
@@ -37,13 +36,4 @@ josm {
   }
   i18n {
   }
-}
-
-tasks.jacocoTestReport {
-  reports {
-    xml.isEnabled = true
-    html.isEnabled = true
-  }
-  dependsOn(tasks.test)
-  tasks.check.get().dependsOn(this)
 }

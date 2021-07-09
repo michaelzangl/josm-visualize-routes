@@ -50,7 +50,7 @@ public class StopVicinityPanel extends AbstractVicinityPanel<StopVicinityDerived
                 .getMembers()
                 .stream()
                 .anyMatch(it -> it.getMember().isIncomplete())) {
-            add(new IncompleteMembersWarningPanel(), BorderLayout.NORTH);
+            add(new IncompleteMembersWarningPanel(editorAccess), BorderLayout.NORTH);
         }
 
         UnBoldLabel legend = new UnBoldLabel(
