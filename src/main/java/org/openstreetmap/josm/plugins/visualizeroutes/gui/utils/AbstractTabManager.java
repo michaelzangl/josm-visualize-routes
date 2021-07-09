@@ -1,7 +1,6 @@
 package org.openstreetmap.josm.plugins.visualizeroutes.gui.utils;
 
-import java.awt.Component;
-import java.awt.Container;
+import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.Objects;
@@ -24,6 +23,7 @@ public abstract class AbstractTabManager<T extends Component> {
     private final IRelationEditorActionAccess editorAccess;
     private JScrollPane tabContent = null;
     private ChangeListener tabListener;
+    private Point lastScroll;
 
     public AbstractTabManager(IRelationEditorActionAccess editorAccess) {
         JDialog dialog = (JDialog) editorAccess.getEditor();
@@ -56,13 +56,14 @@ public abstract class AbstractTabManager<T extends Component> {
         if (toShow.shouldDisplay()) {
             if (tabContent == null) {
                 tabContent = new JScrollPane();
+                tabContent.getVerticalScrollBar().setUnitIncrement(20);
+                tabContent.getHorizontalScrollBar().setUnitIncrement(20);
                 tabPanel.add(toShow.getTitle(), tabContent);
                 tabListener = e -> {
                     showIfVisible(toShow);
                 };
                 tabPanel.addChangeListener(tabListener);
             }
-            this.tabContent.getViewport().setView(null);
             // This makes adding the component lazy => complex layouts don't need to be computed immediately
             showIfVisible(toShow);
         } else {
@@ -81,6 +82,12 @@ public abstract class AbstractTabManager<T extends Component> {
             T newContent = toShow.getTabContent();
             Objects.requireNonNull(newContent, "newContent");
             this.tabContent.getViewport().setView(newContent);
+
+            if (lastScroll != null) {
+                this.tabContent.getHorizontalScrollBar().setValue(lastScroll.x);
+                this.tabContent.getVerticalScrollBar().setValue(lastScroll.y);
+                lastScroll = null;
+            }
         }
     }
 
@@ -89,6 +96,9 @@ public abstract class AbstractTabManager<T extends Component> {
         if (this.tabContent != null) {
             JViewport viewport = this.tabContent.getViewport();
             if (viewport.getView() != null) {
+                lastScroll = new Point(
+                        this.tabContent.getHorizontalScrollBar().getValue(),
+                        this.tabContent.getVerticalScrollBar().getValue());
                 dispose((T) viewport.getView());
                 viewport.setView(null);
             }
