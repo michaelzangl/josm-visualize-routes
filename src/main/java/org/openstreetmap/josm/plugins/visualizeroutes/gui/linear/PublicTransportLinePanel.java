@@ -64,7 +64,7 @@ public class PublicTransportLinePanel extends JPanel {
         Comparator<LineRelation> byRefKey = Comparator.comparing(it -> allRefs.indexOf(it.getLineRefKey()));
         return relations
             .stream()
-            .sorted(byRefKey.thenComparing(it -> it.getRelation().get("ref")))
+            .sorted(byRefKey.thenComparing(it -> it.getRelation().get("ref"), Comparator.nullsFirst(Comparator.naturalOrder())))
             .collect(Collectors.toList());
     }
 
