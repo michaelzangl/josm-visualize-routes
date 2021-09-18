@@ -49,13 +49,15 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractVicinityPanel<D extends DerivedDataSet> extends JPanel {
     protected final D dataSetCopy;
-    protected final IRelationEditorActionAccess editorAccess;
+    protected final EnhancedRelationEditorAccess editorAccess;
     protected final MapView mapView;
     private final List<MapCSSStyleSource> style = Collections.unmodifiableList(readStyles());
+    private final RelationEditorChangeListener incompleteBannerUpdate = evt -> updateIncompleteBanner();
     private JComponent actionButtons;
+    private IncompleteMembersWarningPanel incompleteBanner;
 
     public AbstractVicinityPanel(D dataSetCopy,
-                                 IRelationEditorActionAccess editorAccess,
+                                 EnhancedRelationEditorAccess editorAccess,
                                  ZoomSaver zoom) {
         super(new BorderLayout());
         this.dataSetCopy = Objects.requireNonNull(dataSetCopy, "dataSetCopy");
@@ -103,6 +105,36 @@ public abstract class AbstractVicinityPanel<D extends DerivedDataSet> extends JP
         add(mapView);
 
         addActionButtons();
+
+        updateIncompleteBanner();
+        editorAccess.addChangeListener(incompleteBannerUpdate);
+    }
+
+    private void updateIncompleteBanner() {
+        if (isIncomplete()) {
+            if (incompleteBanner == null) {
+                incompleteBanner = new IncompleteMembersWarningPanel(editorAccess);
+                add(incompleteBanner, BorderLayout.NORTH);
+                revalidate();
+            }
+        } else {
+            if (incompleteBanner != null) {
+                remove(incompleteBanner);
+                incompleteBanner = null;
+                revalidate();
+            }
+        }
+    }
+
+    /**
+     * Check if this relation is incomplete for the definition we need
+     * @return true if this relation is incomplete
+     */
+    protected boolean isIncomplete() {
+        return RelationAccess.of(editorAccess)
+                .getMembers()
+                .stream()
+                .anyMatch(it -> it.getMember().isIncomplete());
     }
 
     private void addActionButtons() {
@@ -360,6 +392,7 @@ public abstract class AbstractVicinityPanel<D extends DerivedDataSet> extends JP
 
     public void dispose() {
         dataSetCopy.dispose();
+        editorAccess.removeChangeListener(incompleteBannerUpdate);
     }
 
     private static class FixedStyleLayerPainter implements MapViewPaintable.LayerPainter {

@@ -2,6 +2,7 @@ package org.openstreetmap.josm.plugins.visualizeroutes.gui.routing;
 
 import org.openstreetmap.josm.data.coor.LatLon;
 import org.openstreetmap.josm.data.osm.*;
+import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmHighwayTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationAccess;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.transportmode.RouteType;
@@ -160,24 +161,21 @@ public class RouteTraverser {
         Collection<Node> lastNodes = Collections.emptySet();
         for (IndexedRelationMember wayWithIndex : ways) {
             Way way = wayWithIndex.getMember().getWay();
-            List<Node> wayEnds = getWayEnds(way);
-            if (lastNodes.isEmpty()) {
-                currentSegment.add(wayWithIndex);
-            } else {
+            Collection<Node> wayEnds = getWayEnds(way);
+            if (!lastNodes.isEmpty()) {
                 if (lastNodes.stream().noneMatch(wayEnds::contains)) {
                     // Not connected => commit current segment
                     segments.add(createRouteSegment(currentSegment));
                     currentSegment.clear();
                 }
-                currentSegment.add(wayWithIndex);
             }
+            currentSegment.add(wayWithIndex);
 
             Collection<Node> lastNodes1 = lastNodes;
             lastNodes = wayEnds
                 .stream()
                 .filter(it -> !lastNodes1.contains(it))
                 .collect(Collectors.toList());
-
         }
         // May be empty if we have no valid ways in our relation.
         if (!currentSegment.isEmpty()) {
@@ -210,10 +208,16 @@ public class RouteTraverser {
         return segments;
     }
 
-    private static List<Node> getWayEnds(Way way) {
-        return Arrays.asList(
-            way.firstNode(),
-            way.lastNode());
+    private static Collection<Node> getWayEnds(Way way) {
+        if (isOldStyleRoundabout(way)) {
+            return new LinkedHashSet<>(way.getNodes());
+        } else {
+            return Arrays.asList(way.firstNode(), way.lastNode());
+        }
+    }
+
+    private static boolean isOldStyleRoundabout(Way way) {
+        return way.hasTag(OsmHighwayTags.KEY_JUNCTION, OsmHighwayTags.KEY_JUNCTION_VALUE_ROUNDABOUT);
     }
 
     private Stream<IndexedRelationMember> getSegmentMembers() {

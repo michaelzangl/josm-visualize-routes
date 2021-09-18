@@ -46,13 +46,6 @@ public class StopVicinityPanel extends AbstractVicinityPanel<StopVicinityDerived
     public StopVicinityPanel(EnhancedRelationEditorAccess editorAccess, ZoomSaver zoomSaver) {
         super(new StopVicinityDerivedDataSet(editorAccess), editorAccess, zoomSaver);
 
-        if (RelationAccess.of(editorAccess)
-                .getMembers()
-                .stream()
-                .anyMatch(it -> it.getMember().isIncomplete())) {
-            add(new IncompleteMembersWarningPanel(editorAccess), BorderLayout.NORTH);
-        }
-
         UnBoldLabel legend = new UnBoldLabel(
             tr("Blue: area relation member")
                 + " | "

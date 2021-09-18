@@ -23,17 +23,17 @@ import static org.openstreetmap.josm.tools.I18n.tr;
 public class StopAreaGroupPanel extends AbstractVicinityPanel<AreaGroupDerivedDataSet> {
     public StopAreaGroupPanel(EnhancedRelationEditorAccess editorAccess, ZoomSaver zoomSaver) {
         super(new AreaGroupDerivedDataSet(editorAccess), editorAccess, zoomSaver);
+    }
 
-        if (RelationAccess.of(editorAccess)
-            .getMembers()
-            .stream()
-            .anyMatch(it ->
-                it.getMember().isIncomplete()
-                    || it.isRelation() && it.getRelation().getMembers().stream().anyMatch(r -> r.getMember().isIncomplete())
-            )) {
-            add(new IncompleteMembersWarningPanel(editorAccess), BorderLayout.NORTH);
-        }
-
+    @Override
+    protected boolean isIncomplete() {
+        return RelationAccess.of(editorAccess)
+                .getMembers()
+                .stream()
+                .anyMatch(it ->
+                        it.getMember().isIncomplete()
+                                || it.isRelation() && it.getRelation().getMembers().stream().anyMatch(r -> r.getMember().isIncomplete())
+                );
     }
 
     @Override

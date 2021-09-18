@@ -63,13 +63,7 @@ public class RoutingPanel extends AbstractVicinityPanel<RoutingDerivedDataSet> {
     public RoutingPanel(EnhancedRelationEditorAccess editorAccess, ZoomSaver zoom) {
         super(new RoutingDerivedDataSet(editorAccess), editorAccess, zoom);
 
-        // TODO: To actually determine some features, we might need more.
-        if (RelationAccess.of(editorAccess)
-            .getMembers()
-            .stream()
-            .anyMatch(it -> it.getMember().isIncomplete())) {
-            add(new IncompleteMembersWarningPanel(editorAccess), BorderLayout.NORTH);
-        }
+        // TODO: overwrite isIncomplete. To actually determine some features, we might need more than just non-incomplete members
 
         setMode(defaultMode());
     }
