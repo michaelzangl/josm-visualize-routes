@@ -43,7 +43,7 @@ public class StopVicinityPanel extends AbstractVicinityPanel<StopVicinityDerived
     public static final String CSS_CLASS_EMPTYMEMBER = "emptymember";
     public static final String CSS_CLASS_STOP_POSITION = "stop_position";
 
-    public StopVicinityPanel(IRelationEditorActionAccess editorAccess, ZoomSaver zoomSaver) {
+    public StopVicinityPanel(EnhancedRelationEditorAccess editorAccess, ZoomSaver zoomSaver) {
         super(new StopVicinityDerivedDataSet(editorAccess), editorAccess, zoomSaver);
 
         if (RelationAccess.of(editorAccess)

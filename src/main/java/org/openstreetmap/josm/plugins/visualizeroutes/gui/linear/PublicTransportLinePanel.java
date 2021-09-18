@@ -33,14 +33,21 @@ import static org.openstreetmap.josm.tools.I18n.tr;
 public class PublicTransportLinePanel extends JPanel {
 
     public static final Color HIGHLIGHT = new Color(0x6989FF);
+    private final LineRelationsProvider lineRelationsProvider;
 
     public PublicTransportLinePanel(LineRelationsProvider p) {
-        List<LineRelation> relations = Objects.requireNonNull(p.getRelations(), "p.getRelations()");
-
+        lineRelationsProvider = p;
         setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
         setBorder(new EmptyBorder(5, 5, 5, 5));
 
-        add(p.createHeadlinePanel());
+        reRenderContent();
+    }
+
+    public void reRenderContent() {
+        removeAll();
+        List<LineRelation> relations = Objects.requireNonNull(lineRelationsProvider.getRelations(), "p.getRelations()");
+
+        add(lineRelationsProvider.createHeadlinePanel());
 
         add(Box.createRigidArea(new Dimension(0, 5)));
 
@@ -48,8 +55,9 @@ public class PublicTransportLinePanel extends JPanel {
             add(new UnBoldLabel(tr("No public transport v2 routes are currently used for this relation.")));
             add(Box.createVerticalGlue());
         } else {
-            renderRelationGrid(p, sortByRefKeys(relations));
+            renderRelationGrid(lineRelationsProvider, sortByRefKeys(relations));
         }
+        revalidate();
     }
 
     private List<LineRelation> sortByRefKeys(List<LineRelation> relations) {

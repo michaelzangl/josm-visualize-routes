@@ -16,16 +16,16 @@ import org.openstreetmap.josm.gui.dialogs.relation.RelationEditor;
 import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorActionAccess;
 
 /**
- * Allows adding / removing a tab from the Relation window.
+ * Allows adding / removing one tab from the Relation window.
  */
 public abstract class AbstractTabManager<T extends Component> {
     private final JTabbedPane tabPanel;
-    private final IRelationEditorActionAccess editorAccess;
+    private final EnhancedRelationEditorAccess editorAccess;
     private JScrollPane tabContent = null;
     private ChangeListener tabListener;
     private Point lastScroll;
 
-    public AbstractTabManager(IRelationEditorActionAccess editorAccess) {
+    public AbstractTabManager(EnhancedRelationEditorAccess editorAccess) {
         JDialog dialog = (JDialog) editorAccess.getEditor();
         Container editorComponent = dialog.getContentPane();
 
@@ -38,10 +38,7 @@ public abstract class AbstractTabManager<T extends Component> {
         this.editorAccess = editorAccess;
 
         updateTab();
-        editorComponent.addPropertyChangeListener(RelationEditor.RELATION_PROP, __ -> updateTab());
-        editorAccess.getMemberTableModel().addTableModelListener(__ -> updateTab());
-        editorAccess.getTagModel().addPropertyChangeListener(__ -> updateTab());
-        editorAccess.getTagModel().addTableModelListener(__ -> updateTab());
+        editorAccess.addChangeListener(__ -> updateTab());
         dialog.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosed(WindowEvent e) {
@@ -75,18 +72,25 @@ public abstract class AbstractTabManager<T extends Component> {
         }
     }
 
+    /**
+     * If the user navigated to the current tab, add the tab content to the tab panel
+     * @param toShow The tab to show
+     */
     private void showIfVisible(TabAndDisplay<T> toShow) {
-        possiblyDispose();
-        if (tabPanel.getSelectedComponent() == tabContent
-                && this.tabContent.getViewport().getView() == null) {
-            T newContent = toShow.getTabContent();
-            Objects.requireNonNull(newContent, "newContent");
-            this.tabContent.getViewport().setView(newContent);
+        if (tabPanel.getSelectedComponent() == tabContent) {
+            var viewport = this.tabContent.getViewport();
+            if (viewport.getView() == null) {
+                T newContent = toShow.getTabContent();
+                Objects.requireNonNull(newContent, "newContent");
+                viewport.setView(newContent);
 
-            if (lastScroll != null) {
-                this.tabContent.getHorizontalScrollBar().setValue(lastScroll.x);
-                this.tabContent.getVerticalScrollBar().setValue(lastScroll.y);
-                lastScroll = null;
+                if (lastScroll != null) {
+                    this.tabContent.getHorizontalScrollBar().setValue(lastScroll.x);
+                    this.tabContent.getVerticalScrollBar().setValue(lastScroll.y);
+                    lastScroll = null;
+                }
+            } else {
+                update((T) viewport.getView());
             }
         }
     }
@@ -105,11 +109,28 @@ public abstract class AbstractTabManager<T extends Component> {
         }
     }
 
+    /**
+     * Called when the tab logic detected changes to the current relation but did re-use the component.
+     * @param view The current content.
+     */
+    protected void update(T view) {
+        // Nop
+    }
+
+    /**
+     * Called when the tab logic removes the tab or when the window is closed.
+     * @param view The view that was just removed
+     */
     protected void dispose(T view) {
         // Nop
     }
 
-    protected abstract TabAndDisplay<T> getTabToShow(IRelationEditorActionAccess editorAccess);
+    /**
+     * Get the information about the tab that is managed by this tab manager
+     * @param editorAccess The editor access of the current relation editor
+     * @return The tab and wether it should be displayed
+     */
+    protected abstract TabAndDisplay<T> getTabToShow(EnhancedRelationEditorAccess editorAccess);
 
     public interface TabAndDisplay<T extends Component> {
         boolean shouldDisplay();

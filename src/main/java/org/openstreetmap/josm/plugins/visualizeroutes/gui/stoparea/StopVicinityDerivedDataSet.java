@@ -5,14 +5,17 @@ import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorAction
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopAreaGroupRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.data.DerivedDataSet;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationEditorAccessUtils;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.EnhancedRelationEditorAccess;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.RelationEditorChangeEvent;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.RelationEditorChangeListener;
 
-class StopVicinityDerivedDataSet extends DerivedDataSet {
+class StopVicinityDerivedDataSet extends DerivedDataSet implements RelationEditorChangeListener {
     private final BBox bBox;
     private final long editedRelationId;
     private final Relation stopRelation;
-    private final IRelationEditorActionAccess editorAccess;
+    private final EnhancedRelationEditorAccess editorAccess;
 
-    public StopVicinityDerivedDataSet(IRelationEditorActionAccess editorAccess) {
+    public StopVicinityDerivedDataSet(EnhancedRelationEditorAccess editorAccess) {
         super(editorAccess.getEditor().getLayer().getDataSet());
         this.stopRelation = editorAccess.getEditor().getRelation();
         this.editorAccess = editorAccess;
@@ -22,6 +25,13 @@ class StopVicinityDerivedDataSet extends DerivedDataSet {
             // Extra space: Something around 200.500m depending on where we are on the map.
             .forEach(p -> bBox.addPrimitive(p.getMember(), 0.005));
 
+        editorAccess.addChangeListener(this);
+    }
+
+    @Override
+    public void dispose() {
+        super.dispose();
+        editorAccess.removeChangeListener(this);
     }
 
     @Override
@@ -69,5 +79,11 @@ class StopVicinityDerivedDataSet extends DerivedDataSet {
 
         RelationEditorAccessUtils.getRelationMembers(editorAccess)
             .forEach(m -> relation.addMember(addOrGetDerivedMember(m)));
+    }
+
+    @Override
+    public void relationEditorChanged(RelationEditorChangeEvent changeEvent) {
+        // Will trigger a refresh and then regenerate the additional data
+        markRefreshNeeded();
     }
 }

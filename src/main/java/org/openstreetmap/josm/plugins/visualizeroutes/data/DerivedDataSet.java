@@ -128,7 +128,7 @@ public class DerivedDataSet {
     };
     private boolean refreshNeeded = true;
 
-    private void markRefreshNeeded() {
+    protected void markRefreshNeeded() {
         refreshNeeded = true;
     }
 

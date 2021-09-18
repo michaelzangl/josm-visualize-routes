@@ -60,7 +60,7 @@ public class RoutingPanel extends AbstractVicinityPanel<RoutingDerivedDataSet> {
     private RoutingPanelSpecialMode mode;
     private JPanel actionButtonsPanel;
 
-    public RoutingPanel(IRelationEditorActionAccess editorAccess, ZoomSaver zoom) {
+    public RoutingPanel(EnhancedRelationEditorAccess editorAccess, ZoomSaver zoom) {
         super(new RoutingDerivedDataSet(editorAccess), editorAccess, zoom);
 
         // TODO: To actually determine some features, we might need more.
@@ -96,6 +96,7 @@ public class RoutingPanel extends AbstractVicinityPanel<RoutingDerivedDataSet> {
         }
         this.mode = newMode;
         newMode.createActionButtons().forEach(generateActionButtons()::add);
+        reLayoutActionButtons();
         newMode.enterMode();
     }
 
@@ -298,7 +299,7 @@ public class RoutingPanel extends AbstractVicinityPanel<RoutingDerivedDataSet> {
         @Override
         public Predicate<OsmPrimitive> primitiveFilter() {
             return p -> p instanceof Node
-                // TODO: Only return a node, if those ways are acutally suited for this type of relation.
+                // TODO: Only return a node, if those ways are actually suited for this type of relation.
                 && (p.referrers(Way.class).count() > 1
                 || p.hasTag(OsmStopPositionTags.KEY_PUBLIC_TRANSPORT, OsmStopPositionTags.KEY_PUBLIC_TRANSPORT_VALUE_STOP_POSITION));
         }
@@ -476,7 +477,7 @@ public class RoutingPanel extends AbstractVicinityPanel<RoutingDerivedDataSet> {
                         .map(RouteSegmentWay::getWay)
                     .collect(Collectors.toList()), router.getIndexInMembersToAddAfter());
             });
-            if (!foundTrace.isPresent()) {
+            if (foundTrace.isEmpty()) {
                 Optional<RouteSplitSuggestion> foundSplit = findSplit(originalPrimitive.getPrimitiveId());
                 foundSplit.ifPresent(split -> {
                     if (1 == new AskAboutSplitDialog(split).showDialog().getValue()) {

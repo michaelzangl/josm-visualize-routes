@@ -4,6 +4,7 @@ import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorAction
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationAccess;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.AbstractTabManager;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.EnhancedRelationEditorAccess;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.ZoomSaver;
 
 import static org.openstreetmap.josm.tools.I18n.tr;
@@ -11,12 +12,12 @@ import static org.openstreetmap.josm.tools.I18n.tr;
 public class RoutingTabManager extends AbstractTabManager<RoutingPanel> {
     private final ZoomSaver zoomSaver = new ZoomSaver();
 
-    public RoutingTabManager(IRelationEditorActionAccess editorAccess) {
+    public RoutingTabManager(EnhancedRelationEditorAccess editorAccess) {
         super(editorAccess);
     }
 
     @Override
-    protected TabAndDisplay<RoutingPanel> getTabToShow(IRelationEditorActionAccess editorAccess) {
+    protected TabAndDisplay<RoutingPanel> getTabToShow(EnhancedRelationEditorAccess editorAccess) {
         return new TabAndDisplay<RoutingPanel>() {
             @Override
             public boolean shouldDisplay() {

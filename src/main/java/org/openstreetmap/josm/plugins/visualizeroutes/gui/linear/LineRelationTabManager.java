@@ -14,6 +14,7 @@ import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.lines.LineRelat
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.lines.LineRelationsProvider;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.stops.FoundStop;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.AbstractTabManager;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.EnhancedRelationEditorAccess;
 
 import java.awt.*;
 import java.util.Arrays;
@@ -28,12 +29,12 @@ import static org.openstreetmap.josm.tools.I18n.tr;
  * Adds or removes the tab for the linear relation
  */
 public class LineRelationTabManager extends AbstractTabManager<PublicTransportLinePanel> {
-    public LineRelationTabManager(IRelationEditorActionAccess editorAccess) {
+    public LineRelationTabManager(EnhancedRelationEditorAccess editorAccess) {
         super(editorAccess);
     }
 
     @Override
-    protected TabAndDisplay<PublicTransportLinePanel> getTabToShow(IRelationEditorActionAccess editorAccess) {
+    protected TabAndDisplay<PublicTransportLinePanel> getTabToShow(EnhancedRelationEditorAccess editorAccess) {
         RelationAccess relation = RelationAccess.of(editorAccess);
         if (OsmRouteRelationTags.isRoute(relation)
             && OsmRouteRelationTags.KEY_ROUTE_VALUES_PUBLIC_TRANSPORT.contains(relation.get(OsmRouteRelationTags.KEY_ROUTE))) {
@@ -172,6 +173,12 @@ public class LineRelationTabManager extends AbstractTabManager<PublicTransportLi
                 }
             };
         }
+    }
+
+    @Override
+    protected void update(PublicTransportLinePanel view) {
+        super.update(view);
+        view.reRenderContent();
     }
 
     /**

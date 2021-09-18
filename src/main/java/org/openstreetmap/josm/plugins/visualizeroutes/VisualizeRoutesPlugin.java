@@ -15,6 +15,7 @@ import org.openstreetmap.josm.plugins.visualizeroutes.gui.members.MembersTableEn
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.RoutingTabManager;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea.StopAreaTabManager;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea.StopVicinityTabManager;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.EnhancedRelationEditorAccess;
 
 import javax.swing.*;
 import java.awt.*;
@@ -39,13 +40,14 @@ public class VisualizeRoutesPlugin extends Plugin {
     private void addTabs() {
         // Dirty hack, but works
         RelationEditorHooks.addActionsToMembers(editorAccess -> {
+            EnhancedRelationEditorAccess enhancedAccess = new EnhancedRelationEditorAccess(editorAccess);
             // We need invoke later here because while this method is called, UI is not filled.
             EventQueue.invokeLater(() -> {
-                new LineRelationTabManager(editorAccess);
-                new StopVicinityTabManager(editorAccess);
-                new StopAreaTabManager(editorAccess);
-                new RoutingTabManager(editorAccess);
-                new MembersTableEnhancer(editorAccess);
+                new LineRelationTabManager(enhancedAccess);
+                new StopVicinityTabManager(enhancedAccess);
+                new StopAreaTabManager(enhancedAccess);
+                new RoutingTabManager(enhancedAccess);
+                new MembersTableEnhancer(enhancedAccess);
             });
             // Don't add actions.
             return List.of();

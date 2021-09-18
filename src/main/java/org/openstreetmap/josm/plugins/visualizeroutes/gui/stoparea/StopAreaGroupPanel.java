@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 import static org.openstreetmap.josm.tools.I18n.tr;
 
 public class StopAreaGroupPanel extends AbstractVicinityPanel<AreaGroupDerivedDataSet> {
-    public StopAreaGroupPanel(IRelationEditorActionAccess editorAccess, ZoomSaver zoomSaver) {
+    public StopAreaGroupPanel(EnhancedRelationEditorAccess editorAccess, ZoomSaver zoomSaver) {
         super(new AreaGroupDerivedDataSet(editorAccess), editorAccess, zoomSaver);
 
         if (RelationAccess.of(editorAccess)

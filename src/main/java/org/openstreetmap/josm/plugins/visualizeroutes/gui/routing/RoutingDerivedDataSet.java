@@ -1,34 +1,50 @@
 package org.openstreetmap.josm.plugins.visualizeroutes.gui.routing;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.openstreetmap.josm.data.osm.Node;
 import org.openstreetmap.josm.data.osm.OsmPrimitive;
 import org.openstreetmap.josm.data.osm.Relation;
+import org.openstreetmap.josm.data.osm.RelationMember;
 import org.openstreetmap.josm.data.osm.Way;
 import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorActionAccess;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.data.DerivedDataSet;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationAccess;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.EnhancedRelationEditorAccess;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.RelationEditorChangeEvent;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.utils.RelationEditorChangeListener;
 
 import static org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.RoutingPanel.*;
 
-class RoutingDerivedDataSet extends DerivedDataSet {
-    private final IRelationEditorActionAccess editorAccess;
-    private final RouteTraverser routeTraverser;
+class RoutingDerivedDataSet extends DerivedDataSet implements RelationEditorChangeListener {
+    private final EnhancedRelationEditorAccess editorAccess;
+    private RouteTraverser routeTraverser;
 
-    public RoutingDerivedDataSet(IRelationEditorActionAccess editorAccess) {
+    public RoutingDerivedDataSet(EnhancedRelationEditorAccess editorAccess) {
         super(editorAccess.getEditor().getLayer().getDataSet());
         this.editorAccess = editorAccess;
-        this.routeTraverser = new RouteTraverser(RelationAccess.of(editorAccess));
+        editorAccess.addChangeListener(this);
+    }
+
+    @Override
+    public void dispose() {
+        super.dispose();
+        editorAccess.removeChangeListener(this);
     }
 
     public RouteTraverser getRouteTraverser() {
+        if (routeTraverser == null) {
+            routeTraverser = new RouteTraverser(RelationAccess.of(editorAccess));
+        }
         return routeTraverser;
     }
 
     @Override
     protected void addAdditionalGeometry(AdditionalGeometryAccess addTo) {
+        // Force a reset of the route traverser.
+        routeTraverser = null;
         RelationAccess relation = RelationAccess.of(editorAccess);
 
         relation.getMembers()
@@ -43,7 +59,7 @@ class RoutingDerivedDataSet extends DerivedDataSet {
             });
 
         // Now we mark the route geometry as actual driveable way.
-        List<RouteSegment> segments = routeTraverser.getSegments();
+        List<RouteSegment> segments = getRouteTraverser().getSegments();
         for (int i = 0; i < segments.size(); i++) {
             RouteSegment segment = segments.get(i);
             // Highlights all segments currently in the route
@@ -69,7 +85,7 @@ class RoutingDerivedDataSet extends DerivedDataSet {
         }
 
         // Stops on the route
-        List<RouteStop> stops = routeTraverser.findStopPositions();
+        List<RouteStop> stops = getRouteTraverser().findStopPositions();
         double lastOffsetOnRoute = 0;
         for (RouteStop stop : stops) {
             OsmPrimitive stopNode = addOrGetDerived(stop.getRelationMembers().get(0));
@@ -114,5 +130,10 @@ class RoutingDerivedDataSet extends DerivedDataSet {
         } else {
             return false;
         }
+    }
+
+    @Override
+    public void relationEditorChanged(RelationEditorChangeEvent changeEvent) {
+        markRefreshNeeded();
     }
 }

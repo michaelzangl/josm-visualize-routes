@@ -43,6 +43,10 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+/**
+ * A panel that displays a custom map view with custom style.
+ * @param <D> The data set type.
+ */
 public abstract class AbstractVicinityPanel<D extends DerivedDataSet> extends JPanel {
     protected final D dataSetCopy;
     protected final IRelationEditorActionAccess editorAccess;
@@ -118,6 +122,7 @@ public abstract class AbstractVicinityPanel<D extends DerivedDataSet> extends JP
 
     protected void reLayoutActionButtons() {
         if (actionButtons != null) {
+            actionButtons.revalidate();
             actionButtons.setSize(actionButtons.getPreferredSize());
             setLocationToTopRight(actionButtons);
         }
@@ -127,6 +132,10 @@ public abstract class AbstractVicinityPanel<D extends DerivedDataSet> extends JP
         actionButtons.setLocation(mapView.getWidth() - actionButtons.getWidth() - 10, 10);
     }
 
+    /**
+     * Generates a component that should be displayed in the top right corner. This is only called once.
+     * @return The component or null to create none.
+     */
     protected JComponent generateActionButtons() {
         return null;
     }
@@ -184,6 +193,10 @@ public abstract class AbstractVicinityPanel<D extends DerivedDataSet> extends JP
         return v.getBounds();
     }
 
+    /**
+     * Get the resource paths to the styles that should be displayed.
+     * @return The paths
+     */
     protected abstract List<String> getStylePath();
 
     protected List<MapCSSStyleSource> getStyles() {
