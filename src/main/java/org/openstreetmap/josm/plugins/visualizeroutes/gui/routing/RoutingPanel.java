@@ -2,15 +2,16 @@ package org.openstreetmap.josm.plugins.visualizeroutes.gui.routing;
 
 import org.openstreetmap.josm.actions.JosmAction;
 import org.openstreetmap.josm.actions.SplitWayAction;
+import org.openstreetmap.josm.data.Bounds;
 import org.openstreetmap.josm.data.osm.*;
 import org.openstreetmap.josm.gui.ExtendedDialog;
 import org.openstreetmap.josm.gui.MapView;
 import org.openstreetmap.josm.gui.MapViewState.MapViewPoint;
-import org.openstreetmap.josm.gui.dialogs.relation.actions.IRelationEditorActionAccess;
 import org.openstreetmap.josm.gui.draw.MapViewPath;
 import org.openstreetmap.josm.gui.layer.MapViewPaintable;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmRouteRelationTags;
 import org.openstreetmap.josm.plugins.visualizeroutes.constants.OsmStopPositionTags;
+import org.openstreetmap.josm.plugins.visualizeroutes.data.DerivedDataSet;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.linear.RelationAccess;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.router.*;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.stoparea.StopVicinityPanel;
@@ -21,11 +22,18 @@ import org.openstreetmap.josm.tools.ImageProvider;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.geom.Ellipse2D;
 import java.util.List;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -332,8 +340,9 @@ public class RoutingPanel extends AbstractVicinityPanel<RoutingDerivedDataSet> {
         private final List<RouteTarget> targets;
         private final AbstractRouter router;
         private final Set<OsmPrimitive> targetEnds;
-        private final MapViewPaintable hoverLayer;
+        private final RoutingHintLayer hoverLayer;
         private final List<RouteSplitSuggestion> splitSuggestions;
+
 
         private RoutingMode(AbstractRouter router) {
             this.router = router;
@@ -344,70 +353,7 @@ public class RoutingPanel extends AbstractVicinityPanel<RoutingDerivedDataSet> {
                 .map(RouteTarget::getEnd)
                 .collect(Collectors.toSet());
 
-            this.hoverLayer = (g, mv, bbox) -> {
-                Set<Node> activeNodes = new HashSet<>();
-                Set<PrimitiveId> hoveredSet = dataSetCopy.getHighlightedPrimitives();
-                Optional<RouteSplitSuggestion> foundSplit = Optional.empty();
-                if (hoveredSet.size() == 1) {
-                    g.setStroke(new BasicStroke(3));
-                    PrimitiveId hovered = hoveredSet.iterator().next();
-                    foundSplit = findSplit(hovered);
-                    foundSplit.ifPresent(split -> {
-                        // Parts of the way that won't be used after split.
-                        MapViewPath line = new MapViewPath(mapView);
-                        line.append(split.getSegmentBefore(), false);
-                        line.append(split.getSegmentAfter(), false);
-                        g.setColor(ROUTER_HIGHLIGHT_ROUTE_SPLIT);
-                        g.draw(line);
-
-                        // This is the segment used after split
-                        MapViewPath lineActive = new MapViewPath(mapView);
-                        lineActive.append(split.getSegment(), false);
-                        g.setColor(ROUTER_HIGHLIGHT_ROUTE);
-                        g.draw(lineActive);
-
-                        activeNodes.add(split.getEndAtNode());
-                    });
-
-                    findTrace(hovered).ifPresent(target -> {
-                        // Paint a line
-                        MapViewPath line = new MapViewPath(mapView);
-                        target.getTrace()
-                            .stream()
-                            .peek(it -> activeNodes.add(it.lastNode()))
-                            .forEach(toDraw -> line.append(toDraw.getWay().getNodes(), false));
-
-                        g.setColor(ROUTER_HIGHLIGHT_ROUTE);
-                        g.draw(line);
-                    });
-                }
-
-                g.setStroke(new BasicStroke(2));
-                // Highlight split targets
-                g.setColor(ROUTER_HIGHLIGHT_ROUTE_SPLIT);
-                for (RouteSplitSuggestion it : splitSuggestions) {
-                    drawHighlightCircle(mv, g, activeNodes, it.getEndAtNode());
-                }
-
-                // Highlight all possible routing targets
-                g.setColor(ROUTER_HIGHLIGHT_ROUTE);
-                for (OsmPrimitive it : targetEnds) {
-                    drawHighlightCircle(mv, g, activeNodes, it);
-                }
-
-                // Paint split icons over everything else
-                foundSplit.ifPresent(split -> {
-                    // Split indicators
-                    Node splitStart = split.getStartAtNode();
-                    if (!split.getWay().isFirstLastNode(splitStart)) {
-                        drawSplitIcon(mv, g, splitStart);
-                    }
-                    Node splitEnd = split.getEndAtNode();
-                    if (!split.getWay().isFirstLastNode(splitEnd)) {
-                        drawSplitIcon(mv, g, splitEnd);
-                    }
-                });
-            };
+            this.hoverLayer = new RoutingHintLayer();
         }
 
         private void drawSplitIcon(MapView mv, Graphics2D g, Node node) {
@@ -430,19 +376,25 @@ public class RoutingPanel extends AbstractVicinityPanel<RoutingDerivedDataSet> {
             }
         }
 
-        private Optional<RouteTarget> findTrace(PrimitiveId target) {
-            return targets
-                .stream()
-                .filter(it -> it.getEnd().getPrimitiveId().equals(target))
-                .findFirst();
-        }
-
-
-        private Optional<RouteSplitSuggestion> findSplit(PrimitiveId target) {
-            return splitSuggestions
-                .stream()
-                .filter(it -> it.getEndAtNode().getPrimitiveId().equals(target))
-                .findFirst();
+        private List<HighlighterAndAction> findTraces(PrimitiveId target) {
+            var candidates = Stream.concat(
+                    targets
+                            .stream()
+                            .filter(it -> it.getEnd().getPrimitiveId().equals(target))
+                            .map(TraceHighlighter::new),
+                    splitSuggestions
+                            .stream()
+                            .filter(it -> it.getEndAtNode().getPrimitiveId().equals(target))
+                            .map(SplitHighlighter::new)
+            ).collect(Collectors.toList());
+            if (!candidates.isEmpty()) {
+                // Remove the long ones
+                var maxLength = candidates.get(0).getLength() + 500;
+                candidates = candidates.stream()
+                        .filter(it -> it.getLength() <= maxLength)
+                        .collect(Collectors.toList());
+            }
+            return candidates;
         }
 
         @Override
@@ -463,51 +415,60 @@ public class RoutingPanel extends AbstractVicinityPanel<RoutingDerivedDataSet> {
 
         @Override
         public void doAction(Point point, OsmPrimitive derivedPrimitive, OsmPrimitive originalPrimitive) {
-            Optional<RouteTarget> foundTrace = findTrace(originalPrimitive.getPrimitiveId());
-            foundTrace.ifPresent(trace -> {
-                editorAccess.getMemberTableModel().addMembersAfterIdx(
-                    trace.getTrace()
-                        .stream()
-                        .map(RouteSegmentWay::getWay)
-                    .collect(Collectors.toList()), router.getIndexInMembersToAddAfter());
-            });
-            if (foundTrace.isEmpty()) {
-                Optional<RouteSplitSuggestion> foundSplit = findSplit(originalPrimitive.getPrimitiveId());
-                foundSplit.ifPresent(split -> {
-                    if (1 == new AskAboutSplitDialog(split).showDialog().getValue()) {
-                        HashSet<Node> segment = new HashSet<>(split.getSegment());
-                        DataSet ds = split.getWay().getDataSet();
-                        Objects.requireNonNull(ds, "ds");
-                        Collection<OsmPrimitive> oldSelection = new ArrayList<>(ds.getSelected());
-
-                        // There is no split way method that does not depend on context.
-                        // We need to set selection, the action will then use the selected ways.
-                        ds.setSelected(Stream.concat(
-                            Stream.of(split.getWay()),
-                            split.streamSplitNodes()
-                        ).collect(Collectors.toList()));
-                        SplitWayAction.runOn(ds);
-
-                        // No return value. But all the new split result ways are selected.
-                        // We try to find the way that was a result of our split.
-                        // Comparing start/end nodes is not enough, since we might have loops
-                        List<Way> result = ds.getSelectedWays()
-                            .stream()
-                            // We try to find the way that was a result of our split.
-                            // Comparing start/end nodes is not enough, since we might have loops
-                            .filter(it -> new HashSet<>(it.getNodes()).equals(segment))
-                            .collect(Collectors.toList());
-                        // silently ignore if not found => user is presented with normal route selection and can retry.
-                        if (result.size() == 1) {
-                            editorAccess.getMemberTableModel().addMembersAfterIdx(
-                                Arrays.asList(result.get(0)),
-                                router.getIndexInMembersToAddAfter());
-                        }
-
-                        // Restore selection
-                        ds.setSelected(oldSelection);
+            List<HighlighterAndAction> traces = findTraces(originalPrimitive.getPrimitiveId())
+                    .stream()
+                    .sorted(Comparator.comparing(HighlighterAndAction::getLength))
+                    .collect(Collectors.toList());
+            if (traces.size() == 1) {
+                traces.get(0).doAction();
+            } else if (traces.size() > 1) {
+                JPopupMenu menu = new JPopupMenu();
+                menu.addPopupMenuListener(new PopupMenuListener() {
+                    @Override
+                    public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
+                    }
+                    @Override
+                    public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
+                        hoverLayer.setPopupHighlightedTrace(null);
+                    }
+                    @Override
+                    public void popupMenuCanceled(PopupMenuEvent e) {
                     }
                 });
+                menu.add(new UnBoldLabel("There are multiple routes to this point"));
+                menu.add(new UnBoldLabel("Please select one"));
+                traces.forEach(trace -> {
+                    var menuItem = new JMenuItem(new JosmAction(trace.getDescription(), null, null, null, false) {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            trace.doAction();
+                        }
+                    });
+                    menuItem.addFocusListener(new FocusListener() {
+                        @Override
+                        public void focusGained(FocusEvent e) {
+                            hoverLayer.setPopupHighlightedTrace(trace);
+                        }
+
+                        @Override
+                        public void focusLost(FocusEvent e) {
+                            hoverLayer.setPopupHighlightedTrace(null);
+                        }
+                    });
+                    /*menuItem.addMouseListener(new MouseAdapter() {
+                        @Override
+                        public void mouseEntered(MouseEvent e) {
+                            hoverLayer.setPopupHighlightedTrace(trace);
+                        }
+
+                        @Override
+                        public void mouseExited(MouseEvent e) {
+                            hoverLayer.setPopupHighlightedTrace(null);
+                        }
+                    });*/
+                    menu.add(menuItem);
+                });
+                menu.show(mapView, point.x, point.y);
             }
         }
 
@@ -520,6 +481,217 @@ public class RoutingPanel extends AbstractVicinityPanel<RoutingDerivedDataSet> {
                 }
             }));
         }
+
+        private class TraceHighlighter implements HighlighterAndAction {
+            private final RouteTarget target;
+
+            public TraceHighlighter(RouteTarget target) {
+                this.target = target;
+            }
+
+            @Override
+            public String getDescription() {
+                var trace = this.target.getTrace();
+                var name = trace.get(trace.size() - 1).getWay().getDisplayName(DefaultNameFormatter.getInstance());
+                return tr("Route via {0}", name == null ? '?' : name);
+            }
+
+            @Override
+            public double getLength() {
+                return target.getTrace().stream().mapToDouble(RouteSegmentWay::getLength).sum();
+            }
+
+            @Override
+            public Stream<Node> paintHighlight(Graphics2D g) {
+                // Paint a line
+                MapViewPath line = new MapViewPath(mapView);
+                target.getTrace().forEach(toDraw -> line.append(toDraw.getWay().getNodes(), false));
+
+                g.setColor(ROUTER_HIGHLIGHT_ROUTE);
+                g.draw(line);
+                return target
+                        .getTrace()
+                        .stream()
+                        .map(RouteSegmentWay::lastNode);
+            }
+
+            @Override
+            public void doAction() {
+                editorAccess.getMemberTableModel().addMembersAfterIdx(
+                        target.getTrace()
+                                .stream()
+                                .map(RouteSegmentWay::getWay)
+                                .collect(Collectors.toList()), router.getIndexInMembersToAddAfter());
+
+                setMode(new RoutingMode(new FromSegmentRouter(
+                        target.getTrace().get(target.getTrace().size() - 1), router.getType())));
+            }
+        }
+
+        private class SplitHighlighter implements HighlighterAndAction{
+            private final RouteSplitSuggestion split;
+
+            public SplitHighlighter(RouteSplitSuggestion split) {
+                this.split = split;
+            }
+
+            @Override
+            public String getDescription() {
+                return tr("Split way to reach this point");
+            }
+
+            @Override
+            public double getLength() {
+                return split.getStartAtNode().getCoor().greatCircleDistance(split.getEndAtNode().getCoor());
+            }
+
+            @Override
+            public Stream<Node> paintHighlight(Graphics2D g) {
+                // Parts of the way that won't be used after split.
+                MapViewPath line = new MapViewPath(mapView);
+                line.append(split.getSegmentBefore(), false);
+                line.append(split.getSegmentAfter(), false);
+                g.setColor(ROUTER_HIGHLIGHT_ROUTE_SPLIT);
+                g.draw(line);
+
+                // This is the segment used after split
+                MapViewPath lineActive = new MapViewPath(mapView);
+                lineActive.append(split.getSegment(), false);
+                g.setColor(ROUTER_HIGHLIGHT_ROUTE);
+                g.draw(lineActive);
+
+                return Stream.of(split.getEndAtNode());
+            }
+
+            @Override
+            public void paintHighlightForeground(Graphics2D g) {
+                // Split indicators
+                Node splitStart = split.getStartAtNode();
+                if (!split.getWay().isFirstLastNode(splitStart)) {
+                    drawSplitIcon(mapView, g, splitStart);
+                }
+                Node splitEnd = split.getEndAtNode();
+                if (!split.getWay().isFirstLastNode(splitEnd)) {
+                    drawSplitIcon(mapView, g, splitEnd);
+                }
+            }
+
+            @Override
+            public void doAction() {
+                if (1 == new AskAboutSplitDialog(split).showDialog().getValue()) {
+                    HashSet<Node> segment = new HashSet<>(split.getSegment());
+                    DataSet ds = split.getWay().getDataSet();
+                    Objects.requireNonNull(ds, "ds");
+                    Collection<OsmPrimitive> oldSelection = new ArrayList<>(ds.getSelected());
+
+                    // There is no split way method that does not depend on context.
+                    // We need to set selection, the action will then use the selected ways.
+                    ds.setSelected(Stream.concat(
+                            Stream.of(split.getWay()),
+                            split.streamSplitNodes()
+                    ).collect(Collectors.toList()));
+                    SplitWayAction.runOn(ds);
+
+                    // No return value. But all the new split result ways are selected.
+                    // We try to find the way that was a result of our split.
+                    // Comparing start/end nodes is not enough, since we might have loops
+                    List<Way> result = ds.getSelectedWays()
+                            .stream()
+                            // We try to find the way that was a result of our split.
+                            // Comparing start/end nodes is not enough, since we might have loops
+                            .filter(it -> new HashSet<>(it.getNodes()).equals(segment))
+                            .collect(Collectors.toList());
+                    // silently ignore if not found => user is presented with normal route selection and can retry.
+                    if (result.size() == 1) {
+                        var way = result.get(0);
+                        editorAccess.getMemberTableModel().addMembersAfterIdx(
+                                Arrays.asList(way),
+                                router.getIndexInMembersToAddAfter());
+
+                        setMode(new RoutingMode(new FromSegmentRouter(
+                                router.getType().createRouteSegmentWay(
+                                        way,
+                                        split.getEndAtNode().getPrimitiveId()
+                                                .equals(way.lastNode().getPrimitiveId()),
+                                        router.getIndexInMembersToAddAfter() + 1,
+                                        Collections.emptyList()
+                                ),
+                                router.getType()
+                        )));
+                    } else {
+                        setMode(defaultMode());
+                    }
+
+                    // Restore selection
+                    ds.setSelected(oldSelection);
+                }
+            }
+        }
+
+        private class RoutingHintLayer implements MapViewPaintable {
+            // Currently highlighted path from open selection popup
+            private HighlighterAndAction popupHighlightedTrace;
+            private final List<PaintableInvalidationListener> invalidationListeners = new CopyOnWriteArrayList<>();
+
+            @Override
+            public void paint(Graphics2D g, MapView mv, Bounds bbox) {
+                Set<PrimitiveId> hoveredSet = dataSetCopy.getHighlightedPrimitives();
+                List<HighlighterAndAction> toPaint = popupHighlightedTrace != null ? Collections.singletonList(popupHighlightedTrace) : hoveredSet.size() == 1 ? RoutingMode.this.findTraces(hoveredSet.iterator().next()) : Collections.emptyList();
+                g.setStroke(new BasicStroke(3));
+
+                Set<Node> activeNodes = toPaint.stream().flatMap(it -> it.paintHighlight(g)).collect(Collectors.toSet());
+
+                g.setStroke(new BasicStroke(2));
+                // Highlight split targets
+                g.setColor(ROUTER_HIGHLIGHT_ROUTE_SPLIT);
+                for (RouteSplitSuggestion it : splitSuggestions) {
+                    RoutingMode.this.drawHighlightCircle(mv, g, activeNodes, it.getEndAtNode());
+                }
+
+                // Highlight all possible routing targets
+                g.setColor(ROUTER_HIGHLIGHT_ROUTE);
+                for (OsmPrimitive it : targetEnds) {
+                    RoutingMode.this.drawHighlightCircle(mv, g, activeNodes, it);
+                }
+
+                // Paint split icons over everything else
+                toPaint.forEach(it -> it.paintHighlightForeground(g));
+            }
+
+            public void setPopupHighlightedTrace(HighlighterAndAction popupHighlightedTrace) {
+                this.popupHighlightedTrace = popupHighlightedTrace;
+                this.invalidationListeners.forEach(it -> it.paintableInvalidated(new PaintableInvalidationEvent(this)));
+            }
+
+            @Override
+            public void addInvalidationListener(PaintableInvalidationListener l) {
+                this.invalidationListeners.add(l);
+            }
+
+            @Override
+            public void removeInvalidationListener(PaintableInvalidationListener l) {
+                this.invalidationListeners.remove(l);
+            }
+        }
+    }
+
+    private interface HighlighterAndAction {
+        /**
+         * @return A description to display in a dropdown if there are multiple options
+         */
+        String getDescription();
+
+        /**
+         * @return The distance form the start (=> priority)
+         */
+        double getLength();
+
+        Stream<Node> paintHighlight(Graphics2D g);
+
+        default void paintHighlightForeground(Graphics2D g) {
+        }
+
+        void doAction();
     }
 
     private static Ellipse2D.Double circleArountPoint(MapViewPoint pos) {

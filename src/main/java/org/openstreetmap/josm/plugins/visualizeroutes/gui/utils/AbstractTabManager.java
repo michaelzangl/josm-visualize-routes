@@ -56,9 +56,7 @@ public abstract class AbstractTabManager<T extends Component> {
                 tabContent.getVerticalScrollBar().setUnitIncrement(20);
                 tabContent.getHorizontalScrollBar().setUnitIncrement(20);
                 tabPanel.add(toShow.getTitle(), tabContent);
-                tabListener = e -> {
-                    showIfVisible(toShow);
-                };
+                tabListener = e -> showIfVisible(toShow);
                 tabPanel.addChangeListener(tabListener);
             }
             // This makes adding the component lazy => complex layouts don't need to be computed immediately
@@ -76,6 +74,7 @@ public abstract class AbstractTabManager<T extends Component> {
      * If the user navigated to the current tab, add the tab content to the tab panel
      * @param toShow The tab to show
      */
+    @SuppressWarnings("unchecked")
     private void showIfVisible(TabAndDisplay<T> toShow) {
         if (tabPanel.getSelectedComponent() == tabContent) {
             var viewport = this.tabContent.getViewport();
