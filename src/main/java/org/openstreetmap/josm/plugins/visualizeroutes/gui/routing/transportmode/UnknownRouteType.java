@@ -13,4 +13,8 @@ public class UnknownRouteType implements RouteType {
         return "";
     }
 
+    @Override
+    public RouteCategory getCategory() {
+        return RouteCategory.UNKNOWN;
+    }
 }

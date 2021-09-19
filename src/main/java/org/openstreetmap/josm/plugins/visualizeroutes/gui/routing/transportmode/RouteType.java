@@ -18,6 +18,8 @@ public interface RouteType {
 
     String getTypeIdentifier();
 
+    RouteCategory getCategory();
+
     /**
      * The tags to search for oneway information
      * @return The tags in the order in which they should be searched.
@@ -41,6 +43,11 @@ public interface RouteType {
         return "";
     }
 
+    /**
+     * Test if the route type may drive on a way with the given tags
+     * @param tags The tags of the way
+     * @return The direction(s) that the route may use the way in.
+     */
     default AccessDirection mayDriveOn(Map<String, String> tags) {
         // OSM can be complicated …
         ACCESS:
@@ -77,6 +84,11 @@ public interface RouteType {
         return AccessDirection.BOTH;
     }
 
+    /**
+     * Not called externally. Determines the access (allowed / denied) for the given tagged way.
+     * @param tags The tags of the way
+     * @return true if that route may drive on the way, ignoring access and oneway tags.
+     */
     default boolean mayDefaultAccess(Map<String, String> tags) {
         return true;
     }

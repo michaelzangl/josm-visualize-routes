@@ -11,7 +11,7 @@ import org.openstreetmap.josm.data.osm.DataSet;
 import org.openstreetmap.josm.data.osm.OsmPrimitive;
 import org.openstreetmap.josm.data.osm.Way;
 import org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.WaySuitability;
-import org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.transportmode.BusRouteType;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.transportmode.publictransport.BusRouteType;
 import org.openstreetmap.josm.testutils.JOSMTestRules;
 
 public class FromNodeRouterTest {

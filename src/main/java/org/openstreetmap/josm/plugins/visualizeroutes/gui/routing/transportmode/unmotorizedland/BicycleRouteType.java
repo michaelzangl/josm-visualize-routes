@@ -1,4 +1,7 @@
-package org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.transportmode;
+package org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.transportmode.unmotorizedland;
+
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.transportmode.RouteCategory;
+import org.openstreetmap.josm.plugins.visualizeroutes.gui.routing.transportmode.RouteType;
 
 import static org.openstreetmap.josm.tools.I18n.tr;
 
@@ -16,6 +19,11 @@ public class BicycleRouteType implements RouteType {
     @Override
     public String getTypeIdentifier() {
         return "bicycle";
+    }
+
+    @Override
+    public RouteCategory getCategory() {
+        return RouteCategory.UNMOTORIZED_LAND;
     }
 
     @Override
